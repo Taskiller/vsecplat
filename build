@@ -76,7 +76,6 @@ make_libnetmap()
 
 	cd $root_dir/userspace/lib
 	make
-	cp -f libnetmap.so ../example/
 }
 
 make_example()
