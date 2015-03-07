@@ -1,0 +1,129 @@
+#!/bin/sh
+
+root_dir=`pwd`
+export root_dir
+
+KSRC=$root_dir/linux-3.18.8/
+export KSRC
+
+make_kernel()
+{
+	echo "make kernel"
+	cd $root_dir
+
+	cp -f x86_64_defconfig $KSRC/arch/x86/configs/
+	cd $KSRC
+	make x86_64_defconfig
+	make j=4	
+	cp -f arch/x86/boot/bzImage ../images/kernel.img
+}
+
+make_drivers()
+{
+	echo "make drivers"
+	cd $root_dir/drivers
+	make j=4
+	cd ..
+	find ./drivers -name *.ko |xargs -I {} cp -f {} rootfs/usr/drv/
+}
+
+make_clean()
+{
+	cd $root_dir
+	rm -rf rootfs.*
+
+	cd $root_dir/drivers
+	make clean
+
+	cd $root_dir/images
+	rm -rf *.img
+
+
+	cd $root_dir/userspace/example
+	make clean
+
+	cd $root_dir/userspace/lib
+	make clean
+
+	rm -rf $root_dir/rootfs/usr/drv/*.ko
+}
+
+show_usage()
+{
+	echo "usage: build [-k] [-i] [-v] [-e] [-c]"
+	echo "	-k : build the kernel"
+	echo "	-i : make rootfs.img" 
+	echo "	-e : build example app" 
+	echo "	-c : clean"
+}
+
+make_images()
+{
+	echo "make images"	
+	cd $root_dir
+
+	cd rootfs
+	find . | sudo cpio --format=newc -oF ../rootfs.cpio
+	cd ..
+	lzma -z -9 < rootfs.cpio > rootfs.img	
+	rm -rf rootfs.cpio
+	mv rootfs.img images/
+}
+
+make_libnetmap()
+{
+	echo "make libnetmap"
+
+	cd $root_dir/userspace/lib
+	make
+	cp -f libnetmap.so ../example/
+}
+
+make_example()
+{
+	echo "make example"
+
+	cd $root_dir/userspace/example
+	make
+}
+
+if [ ! -d images ]; then mkdir images; fi
+if [ ! -d rootfs ]; then
+	tar xf ./userspace/rootfs.tar.xz
+fi
+
+if [ $# -eq 0 ]; then
+	make_kernel
+	make_drivers
+	make_libnetmap
+	make_example
+	make_images
+else
+	while [ $# -gt 0 ]
+	do
+		case $1 in
+			-k)
+				make_kernel
+				;;
+			-i)
+				make_images
+				;;
+			-d)
+				make_drivers
+				;;
+			-l)
+				make_libnetmap
+				;;
+			-e)
+				make_example
+				;;
+			-c)
+				make_clean
+				;;
+			-h)
+				show_usage
+				;;
+		esac
+		shift
+	done
+fi
