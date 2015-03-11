@@ -1,6 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <nm_skb.h>
 
 struct nm_skb *nm_recv(void)
@@ -26,6 +23,7 @@ struct nm_skb *nm_alloc_skb(void)
 	skb->head = (unsigned char *)skb + NM_SKB_SPACE;
 	skb->data = skb->tail = skb->head;
 	skb->end = (unsigned char *)skb + NM_BUF_SIZE;
+
 	return skb;
 }
 
@@ -56,4 +54,25 @@ unsigned char *nm_skb_pull(struct nm_skb *skb, unsigned int len)
 	skb->data += len;
 
 	return skb->data;
+}
+
+void nm_queue_add_tail(struct nm_skb_queue *queue, struct nm_skb *skb)
+{
+	// If mutithread, need a lock
+	list_add_tail(&skb->node, &queue->list);
+	queue->qlen++;
+}
+
+struct nm_skb *nm_skb_dequeue(struct nm_skb_queue *queue)
+{
+	struct nm_skb *skb=NULL;
+
+	// If multithread, need a lock
+	
+	if(!list_empty(&queue->list)){
+		skb = list_first_entry(&queue->list, struct nm_skb, node);
+		list_del(&skb->node);
+		queue->qlen--;
+	}
+	return skb;	
 }
