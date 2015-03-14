@@ -20,12 +20,16 @@ struct nm_skb{
 	
 	/* TCP/UDP head */
 	union{
-		
+		struct tcphdr *th;
+		struct udphdr *uh;
+		unsigned char *raw;
 	}h;
 
 	/* IP head */
 	union{
-
+		struct iphdr *iph;
+		struct arphdr *arph;
+		unsigned char *raw;
 	}nh;
 
 	union{
