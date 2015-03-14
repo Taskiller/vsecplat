@@ -1,5 +1,5 @@
-DRIVERS = netmap/ e1000e/ virtio_net.o
-MOD_LIST:= CONFIG_NETMAP=m CONFIG_E1000E=m CONFIG_VIRTIO_NET=m
+DRIVERS = netmap/ e1000/ virtio_net.o
+MOD_LIST:= CONFIG_NETMAP=m CONFIG_E1000=m CONFIG_VIRTIO_NET=m
 		
 M:=$(PWD)
 # Additional compile flags (e.g. header location)

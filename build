@@ -15,6 +15,7 @@ make_kernel()
 	cd $KSRC
 	make x86_64_defconfig
 	make j=4	
+	cp -f vmlinux ../rootfs/
 	cp -f arch/x86/boot/bzImage ../images/kernel.img
 }
 
@@ -45,6 +46,7 @@ make_clean()
 	cd $root_dir/userspace/lib
 	make clean
 
+	rm -rf $root_dir/rootfs/vmlinux
 	rm -rf $root_dir/rootfs/usr/drv/*.ko
 }
 

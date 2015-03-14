@@ -36,7 +36,9 @@ struct nm_dev *nm_registe_dev(char *name)
 	struct nmreq req;
 
 	int namelen = strlen(name);
-
+	if(namelen<=0 || namelen>=NM_NAME_LEN){
+		return NULL;
+	}	
 	// check the dev name is valid
 	
 	dev = (struct nm_dev *)malloc(sizeof(struct nm_dev));
@@ -53,7 +55,7 @@ struct nm_dev *nm_registe_dev(char *name)
 	}
 	memset(&req, 0, sizeof(struct nmreq));	
 	req.nr_version = NETMAP_API;
-	req.nr_flags = NR_REG_ALL_NISC;
+	req.nr_flags = NR_REG_ALL_NIC;
 	strncpy(req.nr_name, name, namelen);
 	req.nr_name[namelen] = '\0';
 	
