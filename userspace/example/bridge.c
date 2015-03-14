@@ -9,7 +9,12 @@
 
 int main(int argc, char *argv[])
 {
+	struct nm_dev *dev1 = NULL;
+	struct nm_dev *dev2 = NULL;
 	nm_init();		
+
+	dev1 = nm_registe_dev("eth1");
+	dev2 = nm_registe_dev("eth2");
 
 	return 0;
 }

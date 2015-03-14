@@ -41,7 +41,7 @@ unsigned char *nm_skb_push(struct nm_skb *skb, unsigned int len)
 {
 	skb->data -= len;	
 	skb->len += len;
-
+	//TODO: need do some check
 	return skb->data;
 }
 
@@ -52,7 +52,7 @@ unsigned char *nm_skb_pull(struct nm_skb *skb, unsigned int len)
 	}
 	skb->len -= len;
 	skb->data += len;
-
+	//TODO: need do some check 
 	return skb->data;
 }
 

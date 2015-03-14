@@ -86,7 +86,7 @@ make_example()
 	echo "make example"
 
 	cd $root_dir/userspace/example
-	make
+	make 
 
 	cp -af bridge $root_dir/rootfs/usr/bin/
 }

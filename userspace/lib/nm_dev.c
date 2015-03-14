@@ -2,30 +2,8 @@
 
 int nm_init(void)
 {
-	int fd = 0;
-	struct nmreq req;		
-	unsigned int memsize;
-	void *mem=NULL;
+	// here should create a pthread key and store globale variable
 
-	fd = open("/dev/netmap", O_RDWR);
-	if(fd<0){
-		printf("Can't open netmap device!\n");
-		return -1;
-	}
-
-	memset(&req, 0, sizeof(struct nmreq));	
-	req.nr_version = NETMAP_API;
-	
-	if(ioctl(fd, NIOCGINFO, &req)){
-		printf("netmap NIOCGINFO failed.\n");
-		close(fd);
-	}
-	memsize = req.nr_memsize;		
-	printf("memsize = %dMB\n", memsize>>20);
-
-	mem = mmap(NULL, memsize, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
-	close(fd);
-	
 	return 0;
 }
 
@@ -34,6 +12,7 @@ struct nm_dev *nm_registe_dev(char *name)
 	struct nm_dev *dev = NULL;
 	int fd = 0;
 	struct nmreq req;
+	void *mem = NULL;
 
 	int namelen = strlen(name);
 	if(namelen<=0 || namelen>=NM_NAME_LEN){
@@ -63,6 +42,15 @@ struct nm_dev *nm_registe_dev(char *name)
 		printf("Dev %s NIOCREGIF failed\n", name);
 		return NULL;
 	}
+
+	printf("dev=%s, nr_version=%d, nr_offset=0x%x, nr_mmesize=0x%x\n",
+		req.nr_name, req.nr_version, req.nr_offset, req.nr_memsize);
+	printf("nr_tx_slots=%d nr_rx_slots=%d, nr_tx_rings=%d, nr_rx_rings=%d, nr_ringid=%d\n",
+		req.nr_tx_slots, req.nr_rx_slots, req.nr_tx_rings, req.nr_rx_rings, req.nr_ringid);
+
+
+	mem = mmap(NULL, req.nr_memsize, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+	printf("mem=%p\n", mem);
 
 	return dev;
 }
