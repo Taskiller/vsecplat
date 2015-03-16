@@ -14,7 +14,8 @@ int main(int argc, char *argv[])
 	nm_init();		
 
 	dev1 = nm_registe_dev("eth1");
-	dev2 = nm_registe_dev("eth2");
-
+// 	dev2 = nm_registe_dev("eth2");
+	while(1)
+		sleep(10);
 	return 0;
 }

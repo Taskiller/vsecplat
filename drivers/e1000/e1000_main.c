@@ -948,8 +948,10 @@ static int e1000_init_hw_struct(struct e1000_adapter *adapter,
  * The OS initialization, configuring of the adapter private structure,
  * and a hardware reset occur.
  **/
+static struct e1000_adapter *global_e1000_adapter[8];
 static int e1000_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 {
+	static int dev_idx=0;
 	struct net_device *netdev;
 	struct e1000_adapter *adapter;
 	struct e1000_hw *hw;
@@ -1231,6 +1233,7 @@ static int e1000_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 
 #ifdef DEV_NETMAP
 	e1000_netmap_attach(adapter);
+	global_e1000_adapter[dev_idx++] = adapter;
 #endif /* DEV_NETMAP */
 
 	/* print bus type/speed/width info */

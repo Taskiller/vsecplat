@@ -2687,7 +2687,6 @@ netmap_attach(struct netmap_adapter *arg)
 		goto fail;
 	}
 	netmap_adapter_get(&hwna->up);
-
 #ifdef linux
 	if (ifp->netdev_ops) {
 		/* prepare a clone of the netdev ops */
