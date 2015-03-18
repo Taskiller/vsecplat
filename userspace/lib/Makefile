@@ -6,7 +6,7 @@ LIB=libnetmap.so
 
 all: $(LIB)
 
-LIBOBJS=nm_skb.o nm_dev.o nm_desc.o
+LIBOBJS=nm_skb.o nm_dev.o nm_desc.o nm_eth.o
 
 %.o: %.c
 	$(CC) $(CFLAGS) $(INCLUDES) -o $@ -c $<

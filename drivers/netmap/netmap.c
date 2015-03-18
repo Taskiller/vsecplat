@@ -495,7 +495,7 @@ ports attached to the switch)
 MALLOC_DEFINE(M_NETMAP, "netmap", "Network memory map");
 
 /* user-controlled variables */
-int netmap_verbose;
+int netmap_verbose=0;
 
 static int netmap_no_timestamp; /* don't timestamp on rxsync */
 

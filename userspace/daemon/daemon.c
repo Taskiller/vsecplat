@@ -40,6 +40,7 @@ int main(void)
 	}
 
 	// In child process, will deal with the packet
+	packet_handle_loop();
 
 	return 0;
 

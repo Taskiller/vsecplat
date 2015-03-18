@@ -7,12 +7,21 @@ struct nm_skb{
 	struct list_head node;
 	struct nm_skb *next;
 	struct nm_skb *prev;
-	unsigned int size;
 	unsigned int len;
 	unsigned int type;
 	unsigned int buf_type;
+
+	/* metadata */
+	unsigned int rx_if_idx;
+	unsigned int rx_ring_idx;
+	unsigned int rx_slot_idx;
+#if 0
 	int i_ifidx;
 	int o_ifidx;
+#endif
+	struct nm_dev *i_dev;
+	struct nm_dev *o_dev;
+
 	unsigned char *head;
 	unsigned char *data;
 	unsigned char *tail;
@@ -47,10 +56,6 @@ struct nm_skb_queue{
 	unsigned int qlen;
 	// if mutithread, Need lock
 };
-
-#define NM_BUF_SIZE 2048
-#define NM_SKB_SPACE 128
-#define NM_BUF_RESERVED 64
 
 struct nm_skb *nm_recv(void);
 int nm_send(struct nm_skb *skb);

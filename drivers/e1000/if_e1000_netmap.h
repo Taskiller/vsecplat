@@ -125,6 +125,7 @@ e1000_netmap_txsync(struct netmap_kring *kring, int flags)
 			if (slot->flags & NS_BUF_CHANGED) {
 				/* buffer has changed, reload map */
 				// netmap_reload_map(pdev, DMA_TO_DEVICE, old_addr, paddr);
+				paddr += (NM_HEAD_OFFSET + slot->data_offset);
 				curr->buffer_addr = htole64(paddr);
 			}
 			slot->flags &= ~(NS_REPORT | NS_BUF_CHANGED);
@@ -238,6 +239,7 @@ e1000_netmap_rxsync(struct netmap_kring *kring, int flags)
 				goto ring_reset;
 			if (slot->flags & NS_BUF_CHANGED) {
 				// netmap_reload_map(...)
+				paddr += (NM_HEAD_OFFSET + NM_DATA_OFFSET);
 				curr->buffer_addr = htole64(paddr);
 				slot->flags &= ~NS_BUF_CHANGED;
 			}

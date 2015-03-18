@@ -146,6 +146,7 @@ struct netmap_slot {
 	uint32_t buf_idx;	/* buffer index */
 	uint16_t len;		/* length for this slot */
 	uint16_t flags;		/* buf changed, etc. */
+	uint16_t data_ofs;  /* payload offset */
 	uint64_t ptr;		/* pointer for indirect buffers */
 };
 
@@ -552,4 +553,14 @@ struct nm_ifreq {
 	char data[NM_IFRDATA_LEN];
 };
 
+#define NM_BUF_SIZE 2048
+#define NM_HEAD_OFFSET 128
+#define NM_DATA_OFFSET 32  // For skb pull
+#define NM_END_RESERVED 32 // For skb push
+/*
+|<----------               NM_BUF_SIZE               --------->|
+----------------------------------------------------------------
+| NM_HEAD_OFFSET |  NM_DATA_OFFSET | payload | NM_END_RESERVED | 
+----------------------------------------------------------------
+*/
 #endif /* _NET_NETMAP_H_ */
