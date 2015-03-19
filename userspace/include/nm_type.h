@@ -11,8 +11,9 @@
 #include <sys/mman.h>
 #include <net/if.h>
 #include <poll.h>
+
 #include <netmap.h>
-#include <netmap_user.h>
+#include "netmap_user.h"
 
 #define NM_NAME_LEN 16
 #define NM_MAX_NIC 8

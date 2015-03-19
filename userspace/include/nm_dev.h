@@ -6,12 +6,16 @@ struct nm_dev{
 	char name[NM_NAME_LEN];
 	int fd;
 	struct netmap_if *nifp;
-	u16 first_tx_ring, last_tx_ring, cur_tx_ring;
-	u16 first_rx_ring, last_rx_ring, cur_rx_ring;
+	int first_tx_ring, last_tx_ring, cur_tx_ring;
+	int first_rx_ring, last_rx_ring, cur_rx_ring;
 };
 
+enum{
+	IN_DEV=1,
+	OUT_DEV=2,
+};
 
-int nm_dev_init(void);
 struct nm_dev *nm_open_dev(char *name);
+int nm_registe_dev(struct nm_dev *dev, int dir);
 
 #endif

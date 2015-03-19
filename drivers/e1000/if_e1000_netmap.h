@@ -125,7 +125,7 @@ e1000_netmap_txsync(struct netmap_kring *kring, int flags)
 			if (slot->flags & NS_BUF_CHANGED) {
 				/* buffer has changed, reload map */
 				// netmap_reload_map(pdev, DMA_TO_DEVICE, old_addr, paddr);
-				paddr += (NM_HEAD_OFFSET + slot->data_offset);
+				paddr += NM_HEAD_OFFSET;
 				curr->buffer_addr = htole64(paddr);
 			}
 			slot->flags &= ~(NS_REPORT | NS_BUF_CHANGED);
@@ -239,7 +239,7 @@ e1000_netmap_rxsync(struct netmap_kring *kring, int flags)
 				goto ring_reset;
 			if (slot->flags & NS_BUF_CHANGED) {
 				// netmap_reload_map(...)
-				paddr += (NM_HEAD_OFFSET + NM_DATA_OFFSET);
+				paddr += NM_HEAD_OFFSET;
 				curr->buffer_addr = htole64(paddr);
 				slot->flags &= ~NS_BUF_CHANGED;
 			}
@@ -302,6 +302,7 @@ static int e1000_netmap_init_buffers(struct SOFTC_T *adapter)
 		for (i = 0; i < rxr->count; i++) {
 			si = netmap_idx_n2k(&na->rx_rings[r], i);
 			PNMB(na, slot + si, &paddr);
+			paddr += NM_HEAD_OFFSET;
 			// netmap_load_map(...)
 			E1000_RX_DESC(*rxr, i)->buffer_addr = htole64(paddr);
 		}
@@ -320,6 +321,7 @@ static int e1000_netmap_init_buffers(struct SOFTC_T *adapter)
 	for (i = 0; i < na->num_tx_desc; i++) {
 		si = netmap_idx_n2k(&na->tx_rings[0], i);
 		PNMB(na, slot + si, &paddr);
+		paddr += NM_HEAD_OFFSET;
 		// netmap_load_map(...)
 		E1000_TX_DESC(*txr, i)->buffer_addr = htole64(paddr);
 	}

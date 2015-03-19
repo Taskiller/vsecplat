@@ -1,7 +1,7 @@
 #ifndef __NM_SKB_H__
 #define __NM_SKB_H__
-#include <nm_type.h>
-#include <nm_list.h>
+#include "nm_type.h"
+#include "nm_list.h"
 
 struct nm_skb{
 	struct list_head node;
@@ -47,7 +47,7 @@ struct nm_skb{
 };
 
 enum{
-	NETMAP_BUF,
+	NETMAP_BUF=0,
 	MEMORY_BUF
 };
 
