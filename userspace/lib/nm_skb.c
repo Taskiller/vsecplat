@@ -72,6 +72,7 @@ struct nm_skb *nm_recv(void)
 	}
 
  	// Find the avail netmap_if
+get_next_if:
 	rx_if_idx = get_next_if_idx(global_nm_desc->rx_if_idx);
 	if(rx_if_idx!=-1){
 		global_nm_desc->rx_if_idx = rx_if_idx;
@@ -88,8 +89,9 @@ struct nm_skb *nm_recv(void)
 	if(rx_ring_idx!=-1){
 		global_nm_desc->rx_ring_idx = rx_ring_idx;
 	}else{
-		global_nm_desc->fds[rx_if_idx].revents=0;
-		goto no_packet;
+		//now this netmap_if has no packet
+		global_nm_desc->fds[rx_if_idx].revents=0; 
+		goto get_next_if;
 	}
 
 	dev = global_nm_desc->nm_dev[rx_if_idx];
@@ -125,15 +127,30 @@ no_packet:
 	return skb;
 }
 
+static struct netmap_ring *get_tx_ring(struct nm_dev *dev)
+{
+	struct netmap_ring *ring=NULL;
+	int start = dev->first_tx_ring;
+	while(start<=dev->last_tx_ring){
+		ring = NETMAP_TXRING(dev->nifp, start);
+		if(nm_ring_space(ring)){
+			break;
+		}
+	}
+	if(start>dev->last_tx_ring){
+		return NULL;
+	}
+
+	return ring;
+}
+
 int nm_send(struct nm_skb *skb)
 {
-#if 0
-	char *p = (char *)skb;
-
-	struct netmap_if *rx_nifp, *tx_nifp;
+	struct netmap_if *rx_nifp;
 	struct netmap_ring *rx_ring, *tx_ring;
 	struct netmap_slot *rx_slot, *tx_slot;
-	
+	int cur;	
+
 	if(skb->o_dev==NULL){
 		return -1;
 	}
@@ -143,10 +160,24 @@ int nm_send(struct nm_skb *skb)
 	if(skb->buf_type==MEMORY_BUF){ // packet buf is system memory
 
 	}else{ // packet buf is netmap buf
+		rx_nifp = skb->i_dev->nifp;
 		rx_ring = NETMAP_RXRING(rx_nifp, skb->rx_ring_idx);
-		rx_slot = &rx_ring->slot[skb->slot_idx];
+		rx_slot = &rx_ring->slot[skb->rx_slot_idx];
+
+		tx_ring = get_tx_ring(skb->o_dev);
+		cur = tx_ring->cur;
+		tx_slot = &tx_ring->slot[tx_ring->cur];	
+
+		tx_slot->len = rx_slot->len;
+		uint32_t pkt = tx_slot->buf_idx;	
+		tx_slot->buf_idx = rx_slot->buf_idx;
+		rx_slot->buf_idx = pkt;
+		tx_slot->flags |= NS_BUF_CHANGED;
+		rx_slot->flags |= NS_BUF_CHANGED;
+
+		cur = nm_ring_next(tx_ring, cur);
+		tx_ring->head = tx_ring->cur = cur;
 	}
-#endif
 
 	return 0;
 }
