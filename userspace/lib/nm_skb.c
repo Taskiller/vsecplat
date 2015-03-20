@@ -111,15 +111,15 @@ get_next_if:
     skb->tail = (unsigned char *)p + slot->len;
     skb->end = (unsigned char *)p + NM_BUF_SIZE - NM_END_RESERVED;
     skb->len = slot->len;
-
-	printf("cur=%d, skb->data = %x %x %x %x %x %x: %x %x %x %x %x %x, %x %x %x %x\n",
-		cur,
+#if 0
+	printf("recv %s, cur=%d, skb->data = %x %x %x %x %x %x: %x %x %x %x %x %x, %x %x %x %x\n",
+		dev->name, cur,
 		skb->data[0], skb->data[1], skb->data[2],
 		skb->data[3], skb->data[4], skb->data[5],
 		skb->data[6], skb->data[7], skb->data[8],
 		skb->data[9], skb->data[10], skb->data[11],
 		skb->data[12], skb->data[13], skb->data[14], skb->data[15]);
-
+#endif
     cur = nm_ring_next(ring, cur);
     ring->head = ring->cur = cur;
 	
@@ -175,9 +175,12 @@ int nm_send(struct nm_skb *skb)
 		tx_slot->flags |= NS_BUF_CHANGED;
 		rx_slot->flags |= NS_BUF_CHANGED;
 
+		// printf("send %s, cur=%d\n", skb->o_dev->name, cur);
 		cur = nm_ring_next(tx_ring, cur);
 		tx_ring->head = tx_ring->cur = cur;
 	}
+
+//	ioctl(skb->o_dev->fd, NIOCTXSYNC, NULL);
 
 	return 0;
 }

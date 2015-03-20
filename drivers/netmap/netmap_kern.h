@@ -174,7 +174,7 @@ struct hrtimer {
 #define	NMG_LOCK_ASSERT()	NM_MTX_ASSERT(netmap_global_lock)
 
 #define ND(format, ...)
-#if 1
+#if 0
 #define D(format, ...)						\
 	do{							\
 		struct timeval __xxts;				\

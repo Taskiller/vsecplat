@@ -1,6 +1,15 @@
 #include <nm_desc.h>
 #include <nm_dev.h>
 
+static void dev_set_feature(const char *name)
+{
+	char cmdbuf[32];
+
+	bzero(cmdbuf, 32*sizeof(char));
+	sprintf(cmdbuf, "ifconfig %s up promisc", name);
+	system(cmdbuf);
+}
+
 extern struct nm_desc *global_nm_desc;
 struct nm_dev *nm_open_dev(char *name)
 {
@@ -60,6 +69,9 @@ struct nm_dev *nm_open_dev(char *name)
 	printf("%s, fd=%d, first_tx_ring=%d, first_rx_ring=%d, last_tx_ring=%d, last_rx_ring=%d\n", 
 		dev->name, dev->fd, dev->first_tx_ring, dev->first_rx_ring, dev->last_tx_ring, dev->last_rx_ring);
 #endif
+	// set dev up and promisc
+	dev_set_feature(dev->name);
+
 	return dev;
 }
 
