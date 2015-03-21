@@ -3,6 +3,30 @@
 #include <nm_skb.h>
 
 extern struct nm_desc *global_nm_desc;
+
+int nm_send(struct nm_skb *skb);
+
+void nm_tx_skb_push(struct nm_skb *skb)
+{
+	list_add_tail(&skb->node, &(global_nm_desc->tx_pool.list));
+	global_nm_desc->tx_pool.count++;
+}
+
+void nm_tx_skb_pop(void)
+{
+	struct list_head send_list;
+	struct nm_skb *skb = NULL;
+
+	list_replace_init(&(global_nm_desc->tx_pool.list), &send_list);
+	global_nm_desc->tx_pool.count=0;
+
+	while(!list_empty(&send_list)){
+		skb = list_first_entry(&send_list, struct nm_skb, node);
+		list_del(&skb->node);
+		nm_send(skb);	
+	}
+}
+
 static inline int get_next_if_idx(int start)
 {
 	while(start<global_nm_desc->fds_num){
@@ -111,6 +135,7 @@ get_next_if:
     skb->tail = (unsigned char *)p + slot->len;
     skb->end = (unsigned char *)p + NM_BUF_SIZE - NM_END_RESERVED;
     skb->len = slot->len;
+
 #if 0
 	printf("recv %s, cur=%d, skb->data = %x %x %x %x %x %x: %x %x %x %x %x %x, %x %x %x %x\n",
 		dev->name, cur,
@@ -136,8 +161,12 @@ static struct netmap_ring *get_tx_ring(struct nm_dev *dev)
 		if(nm_ring_space(ring)){
 			break;
 		}
+		// printf("tx ring, start=%d, head=%d, cur=%d, tail=%d\n", start, ring->head, ring->cur, ring->tail);
+		start++;
 	}
+
 	if(start>dev->last_tx_ring){
+		// when no avial space in ring
 		return NULL;
 	}
 
@@ -151,23 +180,27 @@ int nm_send(struct nm_skb *skb)
 	struct netmap_slot *rx_slot, *tx_slot;
 	int cur;	
 
-	if(skb->o_dev==NULL){
+	struct nm_dev *tx_dev=skb->o_dev;	
+
+	if(tx_dev==NULL){
 		return -1;
 	}
 
-	// find an available tx ring and slot
-	
 	if(skb->buf_type==MEMORY_BUF){ // packet buf is system memory
 
 	}else{ // packet buf is netmap buf
 		rx_nifp = skb->i_dev->nifp;
 		rx_ring = NETMAP_RXRING(rx_nifp, skb->rx_ring_idx);
 		rx_slot = &rx_ring->slot[skb->rx_slot_idx];
+		tx_ring = get_tx_ring(tx_dev);
+		if(tx_ring==NULL){
+		 	ioctl(tx_dev->fd, NIOCTXSYNC, NULL); // No tx space, Need do TXSYNC
+			nm_tx_skb_push(skb);
+			return 0;
+		}
 
-		tx_ring = get_tx_ring(skb->o_dev);
 		cur = tx_ring->cur;
 		tx_slot = &tx_ring->slot[tx_ring->cur];	
-
 		tx_slot->len = rx_slot->len;
 		uint32_t pkt = tx_slot->buf_idx;	
 		tx_slot->buf_idx = rx_slot->buf_idx;
@@ -175,12 +208,9 @@ int nm_send(struct nm_skb *skb)
 		tx_slot->flags |= NS_BUF_CHANGED;
 		rx_slot->flags |= NS_BUF_CHANGED;
 
-		// printf("send %s, cur=%d\n", skb->o_dev->name, cur);
 		cur = nm_ring_next(tx_ring, cur);
 		tx_ring->head = tx_ring->cur = cur;
 	}
-
-//	ioctl(skb->o_dev->fd, NIOCTXSYNC, NULL);
 
 	return 0;
 }
@@ -234,23 +264,3 @@ unsigned char *nm_skb_pull(struct nm_skb *skb, unsigned int len)
 	return skb->data;
 }
 
-void nm_queue_add_tail(struct nm_skb_queue *queue, struct nm_skb *skb)
-{
-	// If mutithread, need a lock
-	list_add_tail(&skb->node, &queue->list);
-	queue->qlen++;
-}
-
-struct nm_skb *nm_skb_dequeue(struct nm_skb_queue *queue)
-{
-	struct nm_skb *skb=NULL;
-
-	// If multithread, need a lock
-	
-	if(!list_empty(&queue->list)){
-		skb = list_first_entry(&queue->list, struct nm_skb, node);
-		list_del(&skb->node);
-		queue->qlen--;
-	}
-	return skb;	
-}

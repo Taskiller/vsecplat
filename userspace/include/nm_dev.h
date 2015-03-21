@@ -10,12 +10,7 @@ struct nm_dev{
 	int first_rx_ring, last_rx_ring, cur_rx_ring;
 };
 
-enum{
-	IN_DEV=1,
-	OUT_DEV=2,
-};
-
 struct nm_dev *nm_open_dev(char *name);
-int nm_registe_dev(struct nm_dev *dev, int dir);
+int nm_registe_dev(struct nm_dev *dev);
 
 #endif

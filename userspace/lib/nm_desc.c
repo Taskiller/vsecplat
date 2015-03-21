@@ -11,6 +11,8 @@ int nm_desc_init(void)
 
 	global_nm_desc->need_poll = 1;	
 
+	INIT_LIST_HEAD(&(global_nm_desc->tx_pool.list));		
+
 	return 0;
 }
 

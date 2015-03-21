@@ -22,10 +22,12 @@ int main(int argc, char *argv[])
 	dev1 = nm_open_dev("eth1");
  	dev2 = nm_open_dev("eth2");
 	
-	nm_registe_dev(dev1, IN_DEV);
-	nm_registe_dev(dev2, IN_DEV);
+	nm_registe_dev(dev1);
+	nm_registe_dev(dev2);
 
 	for(;;){
+		nm_tx_skb_pop();
+
 		skb = nm_recv();
 		if(skb==NULL){
 			continue;

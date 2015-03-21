@@ -75,16 +75,13 @@ struct nm_dev *nm_open_dev(char *name)
 	return dev;
 }
 
-int nm_registe_dev(struct nm_dev *dev, int dir)
+int nm_registe_dev(struct nm_dev *dev)
 {
 	int fds_idx = global_nm_desc->fds_num;
+
 	global_nm_desc->fds[fds_idx].fd = dev->fd;
-	if(dir & IN_DEV){
-		global_nm_desc->fds[fds_idx].events |= POLLIN;
-	}
-	if(dir & OUT_DEV){
-		global_nm_desc->fds[fds_idx].events |= POLLOUT;
-	}
+	global_nm_desc->fds[fds_idx].events |= POLLIN;
+	global_nm_desc->fds[fds_idx].events |= POLLOUT;
 	global_nm_desc->nm_dev[fds_idx] = dev;
 	global_nm_desc->fds_num++;
 
