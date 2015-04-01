@@ -11,11 +11,18 @@
 
 static struct thread_master *master=NULL;
 
+struct config_desc *init_global_desc(void)
+{
+	
+}
+
 int main(void)
 {
 	int ret=0;
 	int sock=0;
 	struct thread thread;
+
+	// parse configfile and init global descriptor
 
 	ret = fork();	
 
@@ -34,6 +41,7 @@ int main(void)
 
 		thread_add_read(master, xml_sock_listen, NULL, sock);	
 		memset(&thread, 0, sizeof(struct thread));
+
 		while(thread_fetch(master, &thread)){
 			thread_call(&thread);
 		}

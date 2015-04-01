@@ -129,7 +129,7 @@ struct thread *thread_add_read(struct thread_master *m,
 					int (*func)(struct thread *), void *arg, int fd)
 {
 	struct thread *thread;
-#if 1
+#if 0
 	char file_name[64];
 
 	memset(file_name, 0, 64);
@@ -139,6 +139,7 @@ struct thread *thread_add_read(struct thread_master *m,
 		return NULL;
 	}
 #endif
+
 	if(FD_ISSET(fd, &m->readfd)){
 		//TODO
 		return NULL;
@@ -156,6 +157,7 @@ struct thread *thread_add_write(struct thread_master *m,
 					int (*func)(struct thread *), void *arg, int fd)
 {
 	struct thread *thread;
+#if 0
 	char file_name[64];
 
 	memset(file_name, 0, 64);
@@ -164,6 +166,7 @@ struct thread *thread_add_write(struct thread_master *m,
 		//TODO
 		return NULL;
 	}
+#endif
 	if(FD_ISSET(fd, &m->writefd)){
 		//TODO
 		return NULL;

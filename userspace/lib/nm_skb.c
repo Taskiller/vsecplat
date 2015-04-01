@@ -84,7 +84,7 @@ struct nm_skb *nm_recv(void)
 	int ret=0;
 
 	if(global_nm_desc->need_poll){ // Need poll again
-		ret = poll(global_nm_desc->fds, global_nm_desc->fds_num, 1000);
+		ret = poll(global_nm_desc->fds, global_nm_desc->fds_num, 100);
 		if(ret==0){
 			printf("poll timeout\n");
 			goto no_packet;
@@ -161,7 +161,7 @@ static struct netmap_ring *get_tx_ring(struct nm_dev *dev)
 		if(nm_ring_space(ring)){
 			break;
 		}
-		// printf("tx ring, start=%d, head=%d, cur=%d, tail=%d\n", start, ring->head, ring->cur, ring->tail);
+		printf("tx ring, start=%d, head=%d, cur=%d, tail=%d\n", start, ring->head, ring->cur, ring->tail);
 		start++;
 	}
 

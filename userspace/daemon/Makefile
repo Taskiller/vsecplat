@@ -2,7 +2,6 @@ TARGETS := vsecplat
 
 target_OBJECTS = objs/daemon.o \
 				 objs/thread.o \
-				 objs/sock_common.o \
 				 objs/rte_json.o
 
 CFLAGS = -g 
@@ -26,8 +25,8 @@ objs/daemon.o:daemon.c
 objs/thread.o:thread.c
 	$(COMPILE) -c -o $@ $<
 
-objs/sock_common.o:sock_common.c
-	$(COMPILE) -c -o $@ $<
+# objs/sock_common.o:sock_common.c
+#	$(COMPILE) -c -o $@ $<
 
 objs/rte_json.o:rte_json.c
 	$(COMPILE) -c -o $@ $<
