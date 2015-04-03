@@ -11,6 +11,7 @@ struct thread_list{
 struct thread_master{
 	struct thread_list read;
 	struct thread_list write;
+	struct thread_list timer;
 	struct thread_list ready;
 	struct thread_list unuse;
 	fd_set readfd;
@@ -29,7 +30,7 @@ struct thread{
 	union{
 		int val;
 		int fd;
-		// struct timeval sands;
+		struct timeval sands;
 	}u;
 };
 

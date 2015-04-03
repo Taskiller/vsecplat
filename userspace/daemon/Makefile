@@ -2,7 +2,9 @@ TARGETS := vsecplat
 
 target_OBJECTS = objs/daemon.o \
 				 objs/thread.o \
-				 objs/rte_json.o
+				 objs/config.o \
+				 objs/msg_comm.o \
+				 objs/packet.o 
 
 CFLAGS = -g 
 LIBS = -ldl -lcrypt
@@ -28,7 +30,16 @@ objs/thread.o:thread.c
 # objs/sock_common.o:sock_common.c
 #	$(COMPILE) -c -o $@ $<
 
-objs/rte_json.o:rte_json.c
+# objs/rte_json.o:rte_json.c
+#	$(COMPILE) -c -o $@ $<
+
+objs/config.o:config.c
+	$(COMPILE) -c -o $@ $<
+
+objs/msg_comm.o:msg_comm.c
+	$(COMPILE) -c -o $@ $<
+
+objs/packet.o:packet.c
 	$(COMPILE) -c -o $@ $<
 
 clean:

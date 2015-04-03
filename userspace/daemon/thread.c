@@ -8,7 +8,6 @@
 #include <string.h>
 #include "thread.h"
 
-#if 0
 #define TIMER_SECOND_MICRO 1000000L
 static struct timeval timeval_adjust(struct timeval a)
 {
@@ -45,7 +44,6 @@ static int timeval_cmp(struct timeval a, struct timeval b)
 {
 	return ((a.tv_sec==b.tv_sec) ? (a.tv_usec-b.tv_usec):(a.tv_sec-b.tv_sec));
 }
-#endif
 
 struct thread_master *thread_master_create(void)
 {
@@ -70,6 +68,20 @@ static void  thread_list_add(struct thread_list *list, struct thread *thread)
 	list->tail = thread;
 	list->count++;
 }
+
+static void thread_list_add_before(struct thread_list *list, struct thread *point, struct thread *thread)
+{
+	thread->next = point;
+	thread->prev = point->prev;
+	if(point->prev){
+		point->prev->next = thread;
+	}else{
+		list->head = thread;
+	}
+	point->prev = thread;
+	list->count++;
+}
+
 static struct thread *thread_list_delete(struct thread_list *list, struct thread *thread)
 {
 	if(thread->next){
@@ -183,7 +195,27 @@ struct thread *thread_add_write(struct thread_master *m,
 struct thread *thread_add_timer(struct thread_master *m,
 				int (*func)(struct thread *), void *arg, long timer)
 {
-	return NULL;
+	struct timeval timer_now;
+	struct thread *thread;
+	struct thread *tt;
+
+	thread = thread_get(m, THREAD_TIMER, func, arg );
+	gettimeofday(&timer_now, NULL);
+	// timer_now.tv_sec = ;
+	timer_now.tv_sec += timer;
+	thread->u.sands = timer_now;
+
+	for(tt=m->timer.head; tt; tt=tt->next){
+		if(timeval_cmp(thread->u.sands, tt->u.sands)<=0)
+			break;
+	}
+	if(tt){
+		thread_list_add_before(&m->timer, tt, thread);
+	}else{
+		thread_list_add(&m->timer, thread);
+	}
+
+	return thread;
 }
 
 struct thread *thread_add_event(struct thread_master *m,
@@ -260,11 +292,21 @@ struct thread *thread_fetch(struct thread_master *m, struct thread *fetch)
 	int num;
 	struct thread *thread;
 	struct timeval timer_val;
+	struct timeval timer_now;
+
 	fd_set readfd;
 	fd_set writefd;
 	fd_set exceptfd;	
 
 	while(1){
+		gettimeofday(&timer_now, NULL);
+		for(thread=m->timer.head; thread; thread=thread->next){
+			if(timeval_cmp(timer_now, thread->u.sands)>=0){
+				thread_list_delete(&m->timer, thread);
+				return thread_run(m, thread, fetch);
+			}
+		}
+
 		if((thread=thread_trim_head(&m->ready))!=NULL){
 			return thread_run(m, thread, fetch);
 		}

@@ -9,13 +9,10 @@
 #include <string.h>
 #include <unistd.h>
 
-static struct thread_master *master=NULL;
+#include "thread.h"
+#include "msg_comm.h"
 
-struct config_desc *init_global_desc(void)
-{
-	
-}
-
+struct thread_master *master=NULL;
 int main(void)
 {
 	int ret=0;
@@ -24,31 +21,30 @@ int main(void)
 
 	// parse configfile and init global descriptor
 
-	ret = fork();	
+//	ret = fork();
 
-	if(ret>0){ // parent
+//	if(ret>0)
+	{ // parent
 		master = thread_master_create();
 		if(NULL==master){
 			//TODO
 			return -1;
 		}
-	
-		sock = serv_un_stream(GUI_XML_PATH);	
-		if(sock<0){
-			//TODO
-			return -1;
-		}
 
-		thread_add_read(master, xml_sock_listen, NULL, sock);	
+		thread_add_timer(master, timer_func, NULL, 5);	
+		// thread_add_read(master, xml_sock_listen, NULL, sock);	
 		memset(&thread, 0, sizeof(struct thread));
 
 		while(thread_fetch(master, &thread)){
 			thread_call(&thread);
 		}
 	}
-
-	// In child process, will deal with the packet
-	packet_handle_loop();
+#if 0
+	else{
+		// In child process, will deal with the packet
+		packet_handle_loop();
+	}
+#endif
 
 	return 0;
 
