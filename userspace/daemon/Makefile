@@ -28,10 +28,6 @@ server: $(server_OBJECTS)
 objs/server.o:server.c
 	$(COMPILE) -c -o $@ $<
 
-vsecplat: $(target_OBJECTS) 
-	$(LINK) $(target_OBJECTS) $(LIBS) 
-
-
 objs/daemon.o:daemon.c
 	$(COMPILE) -c -o $@ $<
 

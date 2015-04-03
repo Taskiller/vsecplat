@@ -49,13 +49,13 @@ int create_sock(void)
 	return sock;
 }
 
-int msg_read(struct thread *thread)
+int msg_deal(struct thread *thread)
 {
 	int sock = THREAD_FD(thread);
 	void *readbuf=NULL;
 	int readlen;
 
-	printf("In msg_read\n");	
+	printf("In msg_deal\n");	
 	readbuf = malloc(4096);
 	memset(readbuf, 0, 4096);
 
@@ -65,6 +65,10 @@ int msg_read(struct thread *thread)
 		return 0;
 	}
 	printf("get msg: %s\n", readbuf);
+	// if send complete
+	thread_add_read(thread->master, msg_deal, NULL, sock);
+	// else 
+	// thread_add_read(thread->master, msg_deal, NULL, sock);
 	return 0;
 }
 
@@ -85,7 +89,7 @@ int msg_sock_listen(struct thread *thread)
 		//TODO
 		goto listen_end;
 	}
-	thread_add_read(thread->master, msg_read, NULL, accept_sock);
+	thread_add_read(thread->master, msg_deal, NULL, accept_sock);
 listen_end:
 	thread_add_read(thread->master, msg_sock_listen, NULL, sock);
 	return 0;
