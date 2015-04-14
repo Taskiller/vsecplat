@@ -6,6 +6,8 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include "vsecplat_status.h"
+#include "vsecplat_config.h"
 #include "msg_comm.h"
 
 int init_sock(char *ipaddr, int port)
@@ -51,34 +53,47 @@ struct conn_desc *init_conn_desc(void)
 }
 
 extern struct thread_master *master;
-int timer_func(struct thread *thread)
+int vsecplat_timer_func(struct thread *thread)
 {
-	printf("In timer_func\n");
+	printf("In vsecplat_timer_func\n");
 	int sock;
 	int ret;
 	struct sockaddr_in serv;
 	char buf[128];
 
-	memset(buf, 0, 128);
-	sock = socket(AF_INET, SOCK_STREAM, 0);
-	if(sock<0){
-		goto out;
-	}
-	memset(&serv, 0, sizeof(struct sockaddr_in));
-	serv.sin_family = AF_INET;
-	serv.sin_port = htons(8000);
-	inet_pton(AF_INET, "127.0.0.1", &serv.sin_addr);
+	switch(global_vsecplat_status->status){
+		case VSECPLAT_CONNECTING_SERV:
+			memset(buf, 0, 128);
+			sock = socket(AF_INET, SOCK_STREAM, 0);
+			if(sock<0){
+				goto out;
+			}
+			memset(&serv, 0, sizeof(struct sockaddr_in));
+			serv.sin_family = AF_INET;
+			serv.sin_port = htons(global_vsecplat_config->serv_cfg->port);
+			inet_pton(AF_INET, global_vsecplat_config->serv_cfg->ipaddr, &serv.sin_addr);
 
-	ret = connect(sock, (struct sockaddr *)&serv, sizeof(struct sockaddr_in));	
-	if(ret<0){
-		close(sock);
-		goto out;
-	}
-	sprintf(buf, "%s", "just for fun");
-	send(sock, buf, strlen(buf), 0);
+			ret = connect(sock, (struct sockaddr *)&serv, sizeof(struct sockaddr_in));	
+			if(ret<0){
+				close(sock);
+				printf("failed to connect server\n");
+				goto out;
+			}
+			global_vsecplat_status->status = VSECPLAT_CONNECT_OK;
+			global_vsecplat_status->serv_sock = sock;
 
-	return ;
+			break;
+
+		case VSECPLAT_CONNECT_OK:
+			sprintf(buf, "%s", "just for fun");
+			send(global_vsecplat_status->serv_sock, buf, strlen(buf), 0);
+			break;
+
+		default:
+			break;
+	}
+
 out:
-	thread_add_timer(master, timer_func, NULL, 5);	
+	thread_add_timer(master, vsecplat_timer_func, NULL, 5);	
 	return;
 }

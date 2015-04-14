@@ -1,5 +1,5 @@
-#ifndef __CONFIG_H__
-#define __CONFIG_H__
+#ifndef __VSECPLAT_CONFIG_H__
+#define __VSECPLAT_CONFIG_H__
 #include "nm_type.h"
 
 struct mgt_cfg{
@@ -22,7 +22,7 @@ struct outport_cfg{
 	char mac[NM_ADDR_STR_LEN];
 };
 
-struct config{
+struct vsecplat_config{
 	struct mgt_cfg *mgt_cfg;
 	struct serv_cfg *serv_cfg;
 	struct vm_list *vm_list;
@@ -30,5 +30,6 @@ struct config{
 	struct outport_cfg *outport_cfg;
 };
 
-struct config *parse_vsecplat_config(void);
+extern struct vsecplat_config *global_vsecplat_config;
+int parse_vsecplat_config(void);
 #endif

@@ -18,12 +18,16 @@ int main(void)
 	int ret=0;
 	int sock=0;
 	struct thread thread;
-	struct config *vsecplat_cfg=NULL;
 
 	// parse configfile and init global descriptor
-	vsecplat_cfg = parse_vsecplat_config();	
-	if(NULL==vsecplat_cfg){
-			// TODO
+	ret = parse_vsecplat_config();	
+	if(ret<0){
+		return -1;
+	}
+
+	ret = init_vsecplat_status();
+	if(ret<0){
+		return -1;
 	}
 
 //	ret = fork();
@@ -36,7 +40,7 @@ int main(void)
 			return -1;
 		}
 
-		thread_add_timer(master, timer_func, NULL, 5);	
+		thread_add_timer(master, vsecplat_timer_func, NULL, 5);	
 		// thread_add_read(master, xml_sock_listen, NULL, sock);	
 		memset(&thread, 0, sizeof(struct thread));
 

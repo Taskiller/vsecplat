@@ -12,6 +12,6 @@ struct conn_desc{
 };
 
 int init_sock(char *ipaddr, int port);
-int timer_func(struct thread *thread);
+int vsecplat_timer_func(struct thread *thread);
 
 #endif

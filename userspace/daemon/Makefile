@@ -3,7 +3,8 @@ TARGETS := vsecplat  server
 target_OBJECTS = objs/daemon.o \
 				 objs/thread.o \
 				 objs/rte_json.o \
-				 objs/config.o \
+				 objs/vsecplat_config.o \
+				 objs/vsecplat_status.o \
 				 objs/msg_comm.o \
 				 objs/packet.o 
 
@@ -39,7 +40,10 @@ objs/thread.o:thread.c
 objs/rte_json.o:rte_json.c
 	$(COMPILE) -c -o $@ $<
 
-objs/config.o:config.c
+objs/vsecplat_config.o:vsecplat_config.c
+	$(COMPILE) -c -o $@ $<
+
+objs/vsecplat_status.o:vsecplat_status.c
 	$(COMPILE) -c -o $@ $<
 
 objs/msg_comm.o:msg_comm.c
