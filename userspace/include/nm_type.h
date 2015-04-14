@@ -6,7 +6,10 @@
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <linux/types.h>
 #include <sys/ioctl.h>
+#include <sys/stat.h>
 #include <arpa/inet.h>
 #include <sys/mman.h>
 #include <net/if.h>
@@ -16,6 +19,9 @@
 #include "netmap_user.h"
 
 #define NM_NAME_LEN 16
+#define NM_ADDR_STR_LEN 18
+#define NM_IP_LEN 18
+#define NM_MAC_LEN 6
 #define NM_MAX_NIC 8
 
 typedef signed char 	s8;

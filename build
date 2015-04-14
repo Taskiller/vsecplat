@@ -43,6 +43,9 @@ make_clean()
 	cd $root_dir/userspace/example
 	make clean
 
+	cd $root_dir/userspace/daemon
+	make clean
+
 	cd $root_dir/userspace/lib
 	make clean
 
@@ -81,12 +84,22 @@ make_libnetmap()
 	cp -af libnetmap.so $root_dir/rootfs/lib64/
 }
 
+make_daemon()
+{
+	echo "make example"
+
+	cd $root_dir/userspace/daemon
+	make  
+
+	cp -af vsecplat $root_dir/rootfs/usr/bin/
+}
+
 make_example()
 {
 	echo "make example"
 
 	cd $root_dir/userspace/example
-	make 
+	make  
 
 	cp -af bridge $root_dir/rootfs/usr/bin/
 }
@@ -100,6 +113,7 @@ if [ $# -eq 0 ]; then
 	make_kernel
 	make_drivers
 	make_libnetmap
+	make_daemon
 	make_example
 	make_images
 else
@@ -120,6 +134,9 @@ else
 				;;
 			-e)
 				make_example
+				;;
+			-u)
+				make_daemon
 				;;
 			-c)
 				make_clean

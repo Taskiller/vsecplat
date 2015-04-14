@@ -18,8 +18,13 @@ int main(void)
 	int ret=0;
 	int sock=0;
 	struct thread thread;
+	struct config *vsecplat_cfg=NULL;
 
 	// parse configfile and init global descriptor
+	vsecplat_cfg = parse_vsecplat_config();	
+	if(NULL==vsecplat_cfg){
+			// TODO
+	}
 
 //	ret = fork();
 

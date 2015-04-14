@@ -14,13 +14,15 @@ CFLAGS = -g
 LIBS = -ldl -lcrypt -lm
 CC = gcc
 NM = nm
+INCLUDES= -I../include/ -I$(root_dir)/include/
+LIBS_INCLUDE = -L$(root_dir)/userspace/lib/
 COMPILE = $(CC) $(CFLAGS) $(INCLUDES)
 LINK = $(COMPILE) -o $@
 
 all: $(TARGETS)
 
 vsecplat: $(target_OBJECTS) 
-	$(LINK) $(target_OBJECTS) $(LIBS) 
+	$(LINK) $(target_OBJECTS) $(LIBS) $(LIBS_INCLUDE)
 
 server: $(server_OBJECTS) 
 	$(LINK) $(server_OBJECTS) $(LIBS) 
