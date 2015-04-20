@@ -53,6 +53,29 @@ struct conn_desc *init_conn_desc(void)
 }
 
 extern struct thread_master *master;
+int vsecplat_parse_policy(struct thread *thread)
+{
+	int serv_sock = THREAD_FD(thread);
+	int readlen=0;	
+	char *readbuf = NULL;
+
+	readbuf = malloc(4096);
+	if(NULL==readbuf){
+		return -1;
+	}
+
+	memset(readbuf, 0, 4096);
+	readlen = read(serv_sock, readbuf, 4096);
+	if(readlen<=0){
+		return -1;
+	}
+
+	printf("readlen=%d, policy:%s\n", readlen, readbuf);
+
+	thread_add_read(master, vsecplat_parse_policy, NULL, global_vsecplat_status->serv_sock);	
+	return 0;
+}
+
 int vsecplat_timer_func(struct thread *thread)
 {
 	printf("In vsecplat_timer_func\n");
@@ -85,8 +108,10 @@ int vsecplat_timer_func(struct thread *thread)
 			break;
 
 		case VSECPLAT_CONNECT_OK:
-			sprintf(buf, "%s", "just for fun");
+			sprintf(buf, "%s", "get policy");
 			send(global_vsecplat_status->serv_sock, buf, strlen(buf), 0);
+
+			thread_add_read(master, vsecplat_parse_policy, NULL, global_vsecplat_status->serv_sock);	
 			break;
 
 		default:
@@ -97,3 +122,4 @@ out:
 	thread_add_timer(master, vsecplat_timer_func, NULL, 5);	
 	return;
 }
+

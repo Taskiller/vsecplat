@@ -2,10 +2,13 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <sys/socket.h>
 #include <string.h>
 #include <netinet/in.h>
 #include <linux/un.h>
+#include <string.h>
 
 #include "thread.h"
 
@@ -49,6 +52,38 @@ int create_sock(void)
 	return sock;
 }
 
+int send_policy(int sock)
+{
+	int fd=0;
+	struct stat stat_buf;
+	int len;
+	char *file_buf=NULL;
+
+	printf("In send_policy\n");
+
+	memset(&stat_buf, 0, sizeof(struct stat));
+	stat("./policy.json", &stat_buf);
+	len = stat_buf.st_size;
+	
+	file_buf = malloc(len);
+	if(NULL==file_buf){
+		return -1;
+	}
+	memset(file_buf, 0, len);
+	fd = open("./policy.json", O_RDONLY);
+	if(fd<0){
+		free(file_buf);
+		return -1;
+	}
+	read(fd, file_buf, len);
+	close(fd);
+	
+	write(sock, file_buf, len);
+	free(file_buf);
+	printf("end send_policy\n");
+	return 0;
+}
+
 int msg_deal(struct thread *thread)
 {
 	int sock = THREAD_FD(thread);
@@ -66,9 +101,13 @@ int msg_deal(struct thread *thread)
 	}
 	printf("get msg: %s\n", readbuf);
 	// if send complete
+	if(!strcmp(readbuf, "get policy")){
+		send_policy(sock);
+	}else{
+		free(readbuf);
+	}
+
 	thread_add_read(thread->master, msg_deal, NULL, sock);
-	// else 
-	// thread_add_read(thread->master, msg_deal, NULL, sock);
 	return 0;
 }
 
@@ -90,6 +129,7 @@ int msg_sock_listen(struct thread *thread)
 		goto listen_end;
 	}
 	thread_add_read(thread->master, msg_deal, NULL, accept_sock);
+
 listen_end:
 	thread_add_read(thread->master, msg_sock_listen, NULL, sock);
 	return 0;
