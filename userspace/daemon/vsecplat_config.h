@@ -12,12 +12,12 @@ struct serv_cfg{
 	char ipaddr[NM_ADDR_STR_LEN];
 	int port;	
 };
-struct vm_list{
-	char name[NM_NAME_LEN];
-	char inport[NM_ADDR_STR_LEN];
+
+struct inport_list{
+	char mac[NM_ADDR_STR_LEN];
 };
 
-struct outport_cfg{
+struct outport_list{
 	// char name[NM_NAME_LEN];
 	char mac[NM_ADDR_STR_LEN];
 };
@@ -25,9 +25,10 @@ struct outport_cfg{
 struct vsecplat_config{
 	struct mgt_cfg *mgt_cfg;
 	struct serv_cfg *serv_cfg;
-	struct vm_list *vm_list;
-	int vm_count;
-	struct outport_cfg *outport_cfg;
+	int inport_num;
+	struct inport_list *inport_list;
+	int outport_num;
+	struct outport_list *outport_list;
 };
 
 extern struct vsecplat_config *global_vsecplat_config;

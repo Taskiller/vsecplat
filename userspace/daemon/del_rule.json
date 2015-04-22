@@ -1,0 +1,6 @@
+{
+	"action":"del ruels",
+	"vm_rules":[
+		{"name":"vm0","id":[0,1]}
+		]
+}

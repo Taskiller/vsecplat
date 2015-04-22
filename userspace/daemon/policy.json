@@ -1,9 +1,0 @@
-[
-{"name":"vm0", [
-	{"tuple":{"sip":"10.0.0.1/24","dip":"20.0.0.1/24","sport":0,"dport":0, "proto":17}, "vlanid":21, action:1},	
-	{"tuple":{"sip":"30.0.0.1/24","dip":"40.0.0.1/24","sport":1,"dport":2, "proto":6}, "vlanid":1, action:2},
-	{"tuple":{"sip":"40.0.0.1/24","dip":"50.0.0.1/24","sport":3,"dport":4, "proto":6}, "vlanid":1, action:3},
-	]
-},
-]
-

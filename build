@@ -45,6 +45,7 @@ make_clean()
 
 	cd $root_dir/userspace/daemon
 	make clean
+	rm -f $root_dir/rootfs/usr/bin/vsecplat
 
 	cd $root_dir/userspace/lib
 	make clean
