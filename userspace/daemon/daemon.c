@@ -22,14 +22,21 @@ int main(void)
 	// parse configfile and init global descriptor
 	ret = parse_vsecplat_config();	
 	if(ret<0){
+		printf("Failed to parse vsecplat config.\n");
+		return -1;
+	}
+	ret = vsecplat_get_all_interface();	
+	if(ret<0){
+		printf("Failed to get interface.\n");
 		return -1;
 	}
 
 	ret = init_vsecplat_status();
 	if(ret<0){
+		printf("Failed to init vsecplat status.\n");
 		return -1;
 	}
-
+#if 0
 //	ret = fork();
 
 //	if(ret>0)
@@ -53,6 +60,7 @@ int main(void)
 		// In child process, will deal with the packet
 		packet_handle_loop();
 	}
+#endif
 #endif
 
 	return 0;
