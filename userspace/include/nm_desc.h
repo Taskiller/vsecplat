@@ -7,6 +7,7 @@ struct nm_tx_pool{
 	struct list_head list;
 	int count;
 };
+
 struct nm_desc{
 	int memsize;
 	void *mem;

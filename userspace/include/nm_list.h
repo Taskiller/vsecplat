@@ -1,6 +1,13 @@
 #ifndef __NM_LIST_H__
 #define __NM_LIST_H__
 
+static inline void prefetch(const void *addr)
+{
+	__asm__ __volatile__(
+			"prefetcht0 %[addr]"
+			: [addr] "+m" (*(volatile char *)addr));
+}
+
 #define NM_LIST_POISION1 ((void *)0x00100100)
 #define NM_LIST_POISION2 ((void *)0x00200200)
 

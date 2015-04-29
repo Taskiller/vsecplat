@@ -4,6 +4,42 @@
 #define VSECPLATFORM_CFG_FILE "./config.json"
 struct vsecplat_config *global_vsecplat_config;
 
+static int str_to_mac(const char *bufp, char *ptr)
+{
+	int i, j;
+	unsigned char val;
+	unsigned char c;
+
+	i = 0;
+	do {
+		j = val = 0;
+
+		/* We might get a semicolon here - not required. */
+		if (i && (*bufp == ':')) {
+			bufp++;
+		}
+
+		do {
+			c = *bufp;
+			if (((unsigned char)(c - '0')) <= 9) {
+				c -= '0';
+			} else if (((unsigned char)((c|0x20) - 'a')) <= 5) {
+				c = (c|0x20) - ('a'-10);
+			} else if (j && (c == ':' || c == 0)) {
+				break;
+			} else {
+				return -1;
+			}
+			++bufp;
+			val <<= 4;
+			val += c;
+		} while (++j < 2);
+		*ptr++ = val;
+	} while (++i < NM_MAC_LEN);
+
+	return *bufp; /* Error if we don't end at end of string. */
+}
+
 int parse_vsecplat_config(void)
 {
 	int fd=0;
@@ -46,7 +82,7 @@ int parse_vsecplat_config(void)
 
 	item = rte_object_get_item(json, "mgt_cfg");	
 	if(NULL!=item){
-		struct mgt_cfg *mgt_cfg = malloc(sizeof(mgt_cfg));			
+		struct mgt_cfg *mgt_cfg = malloc(sizeof(struct mgt_cfg));			
 		if(NULL==mgt_cfg){
 			// TODO
 		}
@@ -65,13 +101,14 @@ int parse_vsecplat_config(void)
 		if(NULL==tmp){
 			// TODO
 		}
-		strncpy(mgt_cfg->mac, tmp->u.val_str, NM_ADDR_STR_LEN);
+		// strncpy(mgt_cfg->mac, tmp->u.val_str, NM_ADDR_STR_LEN);
+		str_to_mac(tmp->u.val_str, mgt_cfg->mac);
 		global_vsecplat_config->mgt_cfg = mgt_cfg;
 	}
 
 	item = rte_object_get_item(json, "serv_cfg");
 	if(NULL!=item){
-		struct serv_cfg *serv_cfg=malloc(sizeof(struct serv_cfg));	
+		struct serv_cfg *serv_cfg = malloc(sizeof(struct serv_cfg));	
 		if(NULL==serv_cfg){
 			// TODO
 		}
@@ -106,7 +143,8 @@ int parse_vsecplat_config(void)
 			if(NULL==tmp){
 				// TODO
 			}
-			strncpy(global_vsecplat_config->inport_list[idx].mac, tmp->u.val_str, NM_ADDR_STR_LEN);
+			// strncpy(global_vsecplat_config->inport_list[idx].mac, tmp->u.val_str, NM_ADDR_STR_LEN);
+			str_to_mac(tmp->u.val_str, global_vsecplat_config->inport_list[idx].mac);	
 		}
 	}
 
@@ -127,7 +165,8 @@ int parse_vsecplat_config(void)
 			if(NULL==tmp){
 				// TODO
 			}
-			strncpy(global_vsecplat_config->outport_list[idx].mac, tmp->u.val_str, NM_ADDR_STR_LEN);
+			// strncpy(global_vsecplat_config->outport_list[idx].mac, tmp->u.val_str, NM_ADDR_STR_LEN);
+			str_to_mac(tmp->u.val_str, global_vsecplat_config->outport_list[idx].mac);	
 		}
 	}
 
