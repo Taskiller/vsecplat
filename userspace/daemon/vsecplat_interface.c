@@ -1,7 +1,7 @@
+#include "vsecplat_config.h"
 #include "vsecplat_interface.h"
 
 static struct list_head vsecplat_interface_list;
-
 static char *get_interface_name(char *name, char *p)
 {
 	int namestart=0, nameend=0;
@@ -99,4 +99,28 @@ struct vsecplat_interface *vsecplat_get_interface_by_mac(char *mac)
 	}
 	return NULL;
 }
+
+int setup_mgt_interface(void)
+{
+	struct vsecplat_interface *ifp = NULL;	
+	FILE *cmd_file=NULL;
+	char cmd_buf[64];
+
+	ifp = vsecplat_get_interface_by_mac(global_vsecplat_config->mgt_cfg->mac);	
+	if(NULL==ifp){
+		return -1;
+	}
+	printf("find mgt interface : %s\n", ifp->name);
+	memset(cmd_buf, 0, 64);					
+	sprintf(cmd_buf, "ifconfig %s %s up", ifp->name, global_vsecplat_config->mgt_cfg->ipaddr);
+	printf("Will exec cmd: %s\n", cmd_buf);
+
+	cmd_file = popen(cmd_buf, "r");
+	if(NULL==cmd_file){
+		return -1;
+	}
+	pclose(cmd_file);
+	return 0;
+}
+
 

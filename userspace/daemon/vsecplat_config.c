@@ -87,11 +87,13 @@ int parse_vsecplat_config(void)
 			// TODO
 		}
 		memset(mgt_cfg, 0, sizeof(struct mgt_cfg));
+	#if 0
 		tmp = rte_object_get_item(item, "name");
 		if(NULL==tmp){
 			// TODO
 		}
 		strncpy(mgt_cfg->name, tmp->u.val_str, NM_NAME_LEN);
+	#endif
 		tmp = rte_object_get_item(item, "ipaddr");	
 		if(NULL==tmp){
 			// TODO

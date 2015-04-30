@@ -3,7 +3,7 @@
 #include "nm_type.h"
 
 struct mgt_cfg{
-	char name[NM_NAME_LEN];
+//	char name[NM_NAME_LEN];
 	char ipaddr[NM_ADDR_STR_LEN];
 	char mac[NM_MAC_LEN];
 };

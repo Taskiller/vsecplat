@@ -20,7 +20,9 @@ int main(void)
 	int ret=0;
 	int sock=0;
 	struct thread thread;
+#if 0
 	struct vsecplat_interface *ifp=NULL;
+#endif
 	// parse configfile and init global descriptor
 	ret = parse_vsecplat_config();	
 	if(ret<0){
@@ -28,15 +30,16 @@ int main(void)
 		return -1;
 	}
 
-	ret = init_vsecplat_interface_list();	
+	ret = init_vsecplat_interface_list();
 	if(ret<0){
 		printf("Failed to get interface.\n");
 		return -1;
 	}
 
-	ifp = vsecplat_get_interface_by_mac(global_vsecplat_config->mgt_cfg->mac);	
-	if(NULL!=ifp){
-		printf("find mgt interface : %s\n", ifp->name);
+	ret = setup_mgt_interface();
+	if(ret<0){
+		printf("Failed to setup mgt interface.\n");
+		return -1;
 	}
 
 	ret = init_vsecplat_status();
@@ -44,6 +47,7 @@ int main(void)
 		printf("Failed to init vsecplat status.\n");
 		return -1;
 	}
+
 #if 0
 //	ret = fork();
 
