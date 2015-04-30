@@ -1,5 +1,5 @@
 {
-	"action":"del ruels",
+	"action":4,
 	"vm_rules":[
 		{"name":"vm0","id":[0,1]}
 		]

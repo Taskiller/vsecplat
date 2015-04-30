@@ -1,5 +1,5 @@
 {
-	"action":"add ruels",
+	"action":3,
 	"vm_rules":[
 		{"name":"vm0", 
 		  "rule_list":[

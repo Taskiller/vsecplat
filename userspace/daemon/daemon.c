@@ -42,6 +42,12 @@ int main(void)
 		return -1;
 	}
 
+	ret = setup_dp_interfaces();
+	if(ret<0){
+		printf("Failed to setup dataplane interface.\n");
+		return -1;
+	}
+
 	ret = init_vsecplat_status();
 	if(ret<0){
 		printf("Failed to init vsecplat status.\n");
@@ -60,7 +66,6 @@ int main(void)
 		}
 
 		thread_add_timer(master, vsecplat_timer_func, NULL, 5);	
-		// thread_add_read(master, xml_sock_listen, NULL, sock);	
 		memset(&thread, 0, sizeof(struct thread));
 
 		while(thread_fetch(master, &thread)){

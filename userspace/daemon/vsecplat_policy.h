@@ -15,7 +15,7 @@ struct rule_list{
 struct vm_rules{
 	char vm_name[NM_NAME_LEN];
 	int rule_num;
-	struct rule_list *rule_list
+	struct rule_list *rule_list;
 };
 
 struct vm_config{
@@ -27,5 +27,12 @@ struct vm_list{
 	int vm_num;
 	struct vm_config *vm_config;
 };
+
+#define ADD_VM 1
+#define DEL_VM 2
+#define ADD_RULE 3
+#define DEL_RULE 4
+
+int vsecplat_parse_policy(const char *buf);
 
 #endif

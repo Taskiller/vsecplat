@@ -1,5 +1,5 @@
 {
-	"action":"del_vm",
+	"action":2,
 	"vm_list":[{"name":"vm0"}, {"name":"vm1"}]
 }
 

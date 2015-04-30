@@ -53,7 +53,7 @@ struct conn_desc *init_conn_desc(void)
 }
 
 extern struct thread_master *master;
-int vsecplat_parse_policy(struct thread *thread)
+int vsecplat_deal_policy(struct thread *thread)
 {
 	int serv_sock = THREAD_FD(thread);
 	int readlen=0;	
@@ -72,7 +72,8 @@ int vsecplat_parse_policy(struct thread *thread)
 
 	printf("readlen=%d, policy:%s\n", readlen, readbuf);
 
-	thread_add_read(master, vsecplat_parse_policy, NULL, global_vsecplat_status->serv_sock);	
+	thread_add_read(master, vsecplat_deal_policy, NULL, global_vsecplat_status->serv_sock);	
+	free(readbuf);
 	return 0;
 }
 
@@ -111,7 +112,7 @@ int vsecplat_timer_func(struct thread *thread)
 			sprintf(buf, "%s", "get policy");
 			send(global_vsecplat_status->serv_sock, buf, strlen(buf), 0);
 
-			thread_add_read(master, vsecplat_parse_policy, NULL, global_vsecplat_status->serv_sock);	
+			thread_add_read(master, vsecplat_deal_policy, NULL, global_vsecplat_status->serv_sock);	
 			break;
 
 		default:

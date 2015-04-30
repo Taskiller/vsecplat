@@ -1,3 +1,4 @@
+#include "nm_dev.h"
 #include "vsecplat_config.h"
 #include "vsecplat_interface.h"
 
@@ -123,4 +124,44 @@ int setup_mgt_interface(void)
 	return 0;
 }
 
+static struct nm_dev **global_dp_interface_array=NULL;
+int setup_dp_interfaces(void)
+{
+	int inport_num = global_vsecplat_config->inport_num;
+	int outport_num = global_vsecplat_config->outport_num;
+	int idx=0;
+	struct nm_dev *dev=NULL;
+	struct vsecplat_interface *ifp=NULL;
 
+	global_dp_interface_array = malloc((inport_num+outport_num)*sizeof(void *));
+	if(NULL==global_dp_interface_array){
+		printf("failed to alloc dataplane interfaces discriptor.\n");
+		return -1;
+	}
+
+	for(idx=0;idx<inport_num; idx++){
+		ifp = vsecplat_get_interface_by_mac(global_vsecplat_config->inport_list[idx].mac);
+		if(NULL==ifp){
+			return -1;
+		}
+		dev = nm_open_dev(ifp->name);
+		if(NULL==dev){
+			return -1;
+		}
+		global_dp_interface_array[idx] = dev;
+	}
+
+	for(idx=0;idx<outport_num;idx++){
+		ifp = vsecplat_get_interface_by_mac(global_vsecplat_config->outport_list[idx].mac);
+		if(NULL==ifp){
+			return -1;
+		}
+		dev = nm_open_dev(ifp->name);
+		if(NULL==dev){
+			return -1;
+		}
+		global_dp_interface_array[inport_num+idx] = dev;
+	}
+
+	return 0;
+}

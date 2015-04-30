@@ -6,6 +6,7 @@ target_OBJECTS = objs/daemon.o \
 				 objs/vsecplat_config.o \
 				 objs/vsecplat_status.o \
 				 objs/vsecplat_interface.o \
+				 objs/vsecplat_policy.o \
 				 objs/msg_comm.o \
 				 objs/packet.o 
 
@@ -13,11 +14,11 @@ server_OBJECTS = objs/server.o \
 				 objs/thread.o
 
 CFLAGS = -g 
-LIBS = -ldl -lcrypt -lm
 CC = gcc
 NM = nm
 INCLUDES= -I../include/ -I$(root_dir)/include/
 LIBS_INCLUDE = -L$(root_dir)/userspace/lib/
+LIBS = -ldl -lcrypt -lm -lnetmap
 COMPILE = $(CC) $(CFLAGS) $(INCLUDES)
 LINK = $(COMPILE) -o $@
 
@@ -27,7 +28,7 @@ vsecplat: $(target_OBJECTS)
 	$(LINK) $(target_OBJECTS) $(LIBS) $(LIBS_INCLUDE)
 
 server: $(server_OBJECTS) 
-	$(LINK) $(server_OBJECTS) $(LIBS) 
+	$(LINK) $(server_OBJECTS) $(LIBS) $(LIBS_INCLUDE)
 
 objs/server.o:server.c
 	$(COMPILE) -c -o $@ $<
@@ -48,6 +49,9 @@ objs/vsecplat_status.o:vsecplat_status.c
 	$(COMPILE) -c -o $@ $<
 
 objs/vsecplat_interface.o:vsecplat_interface.c
+	$(COMPILE) -c -o $@ $<
+
+objs/vsecplat_policy.o:vsecplat_policy.c
 	$(COMPILE) -c -o $@ $<
 
 objs/msg_comm.o:msg_comm.c

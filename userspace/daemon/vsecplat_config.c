@@ -85,6 +85,7 @@ int parse_vsecplat_config(void)
 		struct mgt_cfg *mgt_cfg = malloc(sizeof(struct mgt_cfg));			
 		if(NULL==mgt_cfg){
 			// TODO
+			goto out;
 		}
 		memset(mgt_cfg, 0, sizeof(struct mgt_cfg));
 	#if 0
@@ -97,11 +98,13 @@ int parse_vsecplat_config(void)
 		tmp = rte_object_get_item(item, "ipaddr");	
 		if(NULL==tmp){
 			// TODO
+			goto out;
 		}
 		strncpy(mgt_cfg->ipaddr, tmp->u.val_str, NM_ADDR_STR_LEN);
 		tmp = rte_object_get_item(item, "mac");
 		if(NULL==tmp){
 			// TODO
+			goto out;
 		}
 		// strncpy(mgt_cfg->mac, tmp->u.val_str, NM_ADDR_STR_LEN);
 		str_to_mac(tmp->u.val_str, mgt_cfg->mac);
@@ -113,16 +116,19 @@ int parse_vsecplat_config(void)
 		struct serv_cfg *serv_cfg = malloc(sizeof(struct serv_cfg));	
 		if(NULL==serv_cfg){
 			// TODO
+			goto out;
 		}
 		memset(serv_cfg, 0, sizeof(struct serv_cfg));
 		tmp = rte_object_get_item(item, "ipaddr");
 		if(NULL==tmp){
 			// TODO
+			goto out;
 		}
 		strncpy(serv_cfg->ipaddr, tmp->u.val_str, NM_ADDR_STR_LEN);
 		tmp = rte_object_get_item(item, "port");
 		if(NULL==tmp){
 			// TODO
+			goto out;
 		}
 		serv_cfg->port = tmp->u.val_int;
 		global_vsecplat_config->serv_cfg = serv_cfg;
@@ -134,16 +140,19 @@ int parse_vsecplat_config(void)
 		global_vsecplat_config->inport_list = malloc(global_vsecplat_config->inport_num * sizeof(struct inport_list));
 		if(NULL==global_vsecplat_config->inport_list){
 			//TODO
+			goto out;
 		}
 		memset(global_vsecplat_config->inport_list, 0, sizeof(struct inport_list)*global_vsecplat_config->inport_num);
 		for(idx=0;idx<global_vsecplat_config->inport_num;idx++){
 			entry = rte_array_get_item(item, idx);
 			if(NULL==entry){
 				// TODO
+				goto out;
 			}
 			tmp = rte_object_get_item(entry, "mac");
 			if(NULL==tmp){
 				// TODO
+				goto out;
 			}
 			// strncpy(global_vsecplat_config->inport_list[idx].mac, tmp->u.val_str, NM_ADDR_STR_LEN);
 			str_to_mac(tmp->u.val_str, global_vsecplat_config->inport_list[idx].mac);	
@@ -156,21 +165,29 @@ int parse_vsecplat_config(void)
 		global_vsecplat_config->outport_list = malloc(global_vsecplat_config->outport_num * sizeof(struct outport_list));		
 		if(NULL==global_vsecplat_config->outport_list){
 			// TODO
+			goto out;
 		}
 		memset(global_vsecplat_config->outport_list, 0, sizeof(struct outport_list)*global_vsecplat_config->outport_num);
 		for(idx=0;idx<global_vsecplat_config->outport_num;idx++){
 			entry = rte_array_get_item(item, idx);
 			if(NULL==entry){
 				// TODO
+				goto out;
 			}		
 			tmp = rte_object_get_item(entry, "mac");
 			if(NULL==tmp){
 				// TODO
+				goto out;
 			}
 			// strncpy(global_vsecplat_config->outport_list[idx].mac, tmp->u.val_str, NM_ADDR_STR_LEN);
 			str_to_mac(tmp->u.val_str, global_vsecplat_config->outport_list[idx].mac);	
 		}
 	}
 
+	rte_destroy_json(json);
 	return  0;
+
+out:
+	rte_destroy_json(json);
+	return -1;
 }
