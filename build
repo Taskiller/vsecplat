@@ -90,6 +90,8 @@ make_daemon()
 	echo "make example"
 
 	cd $root_dir/userspace/daemon
+	if [ ! -d objs ]; then mkdir -p objs; fi
+
 	make  
 
 	cp -af vsecplat $root_dir/rootfs/usr/bin/
