@@ -88,19 +88,20 @@ int parse_vsecplat_config(void)
 			goto out;
 		}
 		memset(mgt_cfg, 0, sizeof(struct mgt_cfg));
-	#if 0
+
 		tmp = rte_object_get_item(item, "name");
 		if(NULL==tmp){
 			// TODO
 		}
 		strncpy(mgt_cfg->name, tmp->u.val_str, NM_NAME_LEN);
-	#endif
+
 		tmp = rte_object_get_item(item, "ipaddr");	
 		if(NULL==tmp){
 			// TODO
 			goto out;
 		}
 		strncpy(mgt_cfg->ipaddr, tmp->u.val_str, NM_ADDR_STR_LEN);
+	#if 0
 		tmp = rte_object_get_item(item, "mac");
 		if(NULL==tmp){
 			// TODO
@@ -108,6 +109,7 @@ int parse_vsecplat_config(void)
 		}
 		// strncpy(mgt_cfg->mac, tmp->u.val_str, NM_ADDR_STR_LEN);
 		str_to_mac(tmp->u.val_str, mgt_cfg->mac);
+	#endif
 		global_vsecplat_config->mgt_cfg = mgt_cfg;
 	}
 
@@ -149,6 +151,7 @@ int parse_vsecplat_config(void)
 				// TODO
 				goto out;
 			}
+		#if 0
 			tmp = rte_object_get_item(entry, "mac");
 			if(NULL==tmp){
 				// TODO
@@ -156,6 +159,13 @@ int parse_vsecplat_config(void)
 			}
 			// strncpy(global_vsecplat_config->inport_list[idx].mac, tmp->u.val_str, NM_ADDR_STR_LEN);
 			str_to_mac(tmp->u.val_str, global_vsecplat_config->inport_list[idx].mac);	
+		#endif
+			tmp = rte_object_get_item(entry, "name");
+			if(NULL==tmp){
+				// TODO
+				goto out;
+			}
+			strncpy(global_vsecplat_config->inport_list[idx].name, tmp->u.val_str, NM_NAME_LEN); 
 		}
 	}
 
@@ -174,13 +184,12 @@ int parse_vsecplat_config(void)
 				// TODO
 				goto out;
 			}		
-			tmp = rte_object_get_item(entry, "mac");
+			tmp = rte_object_get_item(entry, "name");
 			if(NULL==tmp){
 				// TODO
 				goto out;
 			}
-			// strncpy(global_vsecplat_config->outport_list[idx].mac, tmp->u.val_str, NM_ADDR_STR_LEN);
-			str_to_mac(tmp->u.val_str, global_vsecplat_config->outport_list[idx].mac);	
+			strncpy(global_vsecplat_config->outport_list[idx].name, tmp->u.val_str, NM_NAME_LEN); 
 		}
 	}
 

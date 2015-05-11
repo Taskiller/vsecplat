@@ -3,9 +3,9 @@
 #include "nm_type.h"
 
 struct mgt_cfg{
-//	char name[NM_NAME_LEN];
+	char name[NM_NAME_LEN];
 	char ipaddr[NM_ADDR_STR_LEN];
-	char mac[NM_MAC_LEN];
+//	char mac[NM_MAC_LEN];
 };
 
 struct serv_cfg{
@@ -14,12 +14,13 @@ struct serv_cfg{
 };
 
 struct inport_list{
-	char mac[NM_MAC_LEN];
+//	char mac[NM_MAC_LEN];
+	char name[NM_NAME_LEN];
 };
 
 struct outport_list{
-	// char name[NM_NAME_LEN];
-	char mac[NM_MAC_LEN];
+	char name[NM_NAME_LEN];
+	// char mac[NM_MAC_LEN];
 };
 
 struct vsecplat_config{
