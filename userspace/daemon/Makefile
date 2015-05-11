@@ -7,6 +7,7 @@ target_OBJECTS = objs/daemon.o \
 				 objs/vsecplat_status.o \
 				 objs/vsecplat_interface.o \
 				 objs/vsecplat_policy.o \
+				 objs/vsecplat_record.o \
 				 objs/msg_comm.o \
 				 objs/packet.o 
 
@@ -52,6 +53,9 @@ objs/vsecplat_interface.o:vsecplat_interface.c
 	$(COMPILE) -c -o $@ $<
 
 objs/vsecplat_policy.o:vsecplat_policy.c
+	$(COMPILE) -c -o $@ $<
+
+objs/vsecplat_record.o:vsecplat_record.c
 	$(COMPILE) -c -o $@ $<
 
 objs/msg_comm.o:msg_comm.c
