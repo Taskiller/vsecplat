@@ -2,6 +2,9 @@
 #define __NM_SKB_H__
 #include "nm_type.h"
 #include "nm_list.h"
+#include "nm_ip.h"
+#include "nm_udp.h"
+#include "nm_tcp.h"
 
 struct nm_skb{
 	struct list_head node;
@@ -44,6 +47,8 @@ struct nm_skb{
 	union{
 		unsigned char *raw;
 	}mac;
+
+	unsigned short vlanid;
 };
 
 enum{

@@ -327,13 +327,68 @@ out:
 }
 
 /*
+ * if match return 1, otherwise return 0 
+ **/
+static int test_match_addr_obj(struct addr_obj *addr_obj, const u32 ip)
+{
+	return 0;
+}
+
+/*
  * return 
  * 	0: not permit forward 
  * 	1: permit
  **/
 int get_forward_policy(struct nm_skb *skb)
 {
-	return 0;
+	struct list_head *pos;
+	struct rule_entry *rule_entry=NULL;
+	int ret=0;
+	
+	u32 saddr=0,daddr=0;
+	u16 sport=0,dport=0,proto=0,vlanid=0;	
+
+	saddr = skb->nh.iph->saddr;
+	daddr = skb->nh.iph->daddr;
+	proto = skb->nh.iph->protocol;
+	vlanid = skb->vlanid;
+	if(proto==6){
+		sport = skb->h.uh->source;
+		dport = skb->h.uh->dest;
+	}else if(proto==17){
+		sport = skb->h.th->source;
+		dport = skb->h.th->dest;
+	}
+	nm_mutex_lock(&fw_policy_list->mutex);	
+	list_for_each(pos, &fw_policy_list->list){
+		rule_entry = list_entry(pos, struct rule_entry, list);
+		if(!test_match_addr_obj(&rule_entry->sip, saddr)){
+			goto not_match;
+		}
+		if(!test_match_addr_obj(&rule_entry->sip, daddr)){
+			goto not_match;
+		}
+		if((rule_entry->sport!=0)&&(rule_entry->sport!=sport)){
+			goto not_match;
+		}
+		if((rule_entry->dport!=0)&&(rule_entry->dport!=dport)){
+			goto not_match;
+		}
+		if((rule_entry->proto!=0)&&(rule_entry->proto!=proto)){
+			goto not_match;
+		}
+		if((rule_entry->vlanid!=0)&&(rule_entry->vlanid!=vlanid)){
+			goto not_match;
+		}
+
+		// reach here, the packet match the policy
+		nm_mutex_unlock(&fw_policy_list->mutex);
+		return rule_entry->forward;
+	}
+
+not_match:
+	nm_mutex_unlock(&fw_policy_list->mutex);	
+	return 1;
 }
 
 int init_policy_list(void)
