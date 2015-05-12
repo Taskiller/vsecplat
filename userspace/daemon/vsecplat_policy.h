@@ -25,7 +25,7 @@ struct addr_obj{
 };
 
 struct rule_entry{
-	int action;
+	int forward;
 	struct addr_obj sip;
 	struct addr_obj dip;
 	int sport;
@@ -58,5 +58,5 @@ struct vm_list{
 #define DEL_RULE 2
 
 int vsecplat_parse_policy(const char *buf);
-
+int test_policy_parse(void);
 #endif

@@ -17,12 +17,13 @@
 struct thread_master *master=NULL;
 int main(void)
 {
+	test_policy_parse();
+#if 0
 	int ret=0;
 	int sock=0;
 	struct thread thread;
-#if 0
-	struct vsecplat_interface *ifp=NULL;
-#endif
+
+
 	// parse configfile and init global descriptor
 	ret = parse_vsecplat_config();	
 	if(ret<0){
@@ -53,6 +54,7 @@ int main(void)
 		printf("Failed to init vsecplat status.\n");
 		return -1;
 	}
+#endif
 
 #if 0
 //	ret = fork();
@@ -81,6 +83,4 @@ int main(void)
 #endif
 
 	return 0;
-
-
 }

@@ -138,6 +138,10 @@ int parse_vsecplat_config(void)
 
 	item = rte_object_get_item(json, "inport_list");
 	if(NULL!=item){
+		if(item->type != JSON_ARRAY){
+			//TODO
+			goto out;
+		}
 		global_vsecplat_config->inport_num = rte_array_get_size(item);
 		global_vsecplat_config->inport_list = malloc(global_vsecplat_config->inport_num * sizeof(struct inport_list));
 		if(NULL==global_vsecplat_config->inport_list){
@@ -165,12 +169,21 @@ int parse_vsecplat_config(void)
 				// TODO
 				goto out;
 			}
+			if(tmp->type!=JSON_STRING){
+				// TODO
+				goto out;
+			}
 			strncpy(global_vsecplat_config->inport_list[idx].name, tmp->u.val_str, NM_NAME_LEN); 
 		}
 	}
 
 	item = rte_object_get_item(json, "outport_list");
 	if(NULL!=item){
+		if(item->type != JSON_ARRAY){
+			// TODO
+			goto out;
+		}
+
 		global_vsecplat_config->outport_num = rte_array_get_size(item);
 		global_vsecplat_config->outport_list = malloc(global_vsecplat_config->outport_num * sizeof(struct outport_list));		
 		if(NULL==global_vsecplat_config->outport_list){
@@ -186,6 +199,10 @@ int parse_vsecplat_config(void)
 			}		
 			tmp = rte_object_get_item(entry, "name");
 			if(NULL==tmp){
+				// TODO
+				goto out;
+			}
+			if(tmp->type != JSON_STRING){
 				// TODO
 				goto out;
 			}
