@@ -121,6 +121,6 @@ int vsecplat_timer_func(struct thread *thread)
 
 out:
 	thread_add_timer(master, vsecplat_timer_func, NULL, 5);	
-	return;
+	return 0;
 }
 

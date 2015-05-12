@@ -1,17 +1,8 @@
-#include "nm_type.h"
+#include <ctype.h>
 #include "rte_json.h"
+#include "nm_type.h"
+#include "nm_skb.h"
 #include  "vsecplat_policy.h"
-
-static int vsecplat_add_rules(struct rte_json *json)
-{
-	return 0;
-}
-
-static int vsecplat_del_rules(struct rte_json *json)
-{
-	return 0;
-}
-
 
 static inline int bad_ip_address(char *str)
 {
@@ -70,9 +61,9 @@ static int get_addr_obj_from_str(struct addr_obj *obj, const char *str)
 {
 	char *pos=NULL;
 	char *cp=NULL;
-	int slen=strlen(str), len=0;
+	int len=0;
 
-	if(pos=strchr(str, '/')){ // XX.XX.XX.XX/N
+	if(NULL!=(pos=strchr(str, '/'))){ // XX.XX.XX.XX/N
 		obj->type = IP_NET;
 		len = pos-str;
 		cp = malloc(len+1);
@@ -85,7 +76,7 @@ static int get_addr_obj_from_str(struct addr_obj *obj, const char *str)
 		inet_aton(cp, &obj->net.mask);
 		free(cp);
 		obj->net.len = atoi(++pos);
-	}else if(pos=strchr(str, '-')){ // XX.XX.XX.XX-YY.YY.YY.YY
+	}else if(NULL!=(pos=strchr(str, '-'))){ // XX.XX.XX.XX-YY.YY.YY.YY
 		obj->type = IP_RANGE;
 		len = pos-str;	
 		cp = malloc(len+1);
@@ -99,7 +90,7 @@ static int get_addr_obj_from_str(struct addr_obj *obj, const char *str)
 		free(cp);
 		pos++;
 		inet_aton(pos, &obj->range.max);
-	}else if(pos=strchr(str, '|')){ // XX.XX.XX.XX |YY.YY.YY.YY
+	}else if(NULL!=(pos=strchr(str, '|'))){ // XX.XX.XX.XX |YY.YY.YY.YY
 		obj->type = IP_GROUP;
 		const char *tmp=str;
 		int idx=0;
@@ -137,8 +128,7 @@ static struct forward_rules *get_forward_rules(struct rte_json *json)
 	struct forward_rules *forward_rules=NULL;
 	struct rule_entry *rule_entry=NULL;
 	struct rte_json *item=NULL, *entry=NULL, *tmp=NULL;
-	int rule_num=0;
-	int idx, size=0;
+	int rule_num=0, idx=0;
 
 	item = rte_object_get_item(json, "forward_rules");
 	if(NULL==item){
@@ -152,15 +142,19 @@ static struct forward_rules *get_forward_rules(struct rte_json *json)
 	if(rule_num==0){
 		goto out;
 	}
-	size = rule_num*sizeof(struct rule_entry)+sizeof(struct forward_rules);
-	forward_rules = (struct forward_rules *)malloc(size);
+	forward_rules = (struct forward_rules *)malloc(sizeof(struct forward_rules));
 	if(NULL==forward_rules){
 		// TODO
 		goto out;
 	}
-	memset(forward_rules, 0, sizeof(size));	
+	memset(forward_rules, 0, sizeof(struct forward_rules));	
+	
 	forward_rules->rule_num = rule_num;
-	forward_rules->rule_entry = (void *)forward_rules+sizeof(struct forward_rules);	
+	forward_rules->rule_entry = (struct rule_entry *)malloc(rule_num*sizeof(struct rule_entry));
+	if(NULL==forward_rules->rule_entry){
+		goto out;
+	}
+	memset(forward_rules->rule_entry, 0, rule_num*sizeof(struct rule_entry));	
 	for(idx=0;idx<rule_num;idx++){
 		rule_entry = forward_rules->rule_entry + idx;
 		entry = rte_array_get_item(item, idx);
@@ -244,13 +238,54 @@ out:
 	return NULL;
 }
 
+static struct forward_rules_head *fw_policy_list=NULL;
+
+static int vsecplat_add_policy(struct forward_rules *forward_rules)
+{
+	int rule_idx=0;
+	struct rule_entry *rule_entry=NULL;
+	nm_mutex_lock(&fw_policy_list->mutex);	
+	// Maybe need check first
+
+	for(rule_idx=0; rule_idx<forward_rules->rule_num; rule_idx++){
+		rule_entry = forward_rules->rule_entry+rule_idx;
+		INIT_LIST_HEAD(&rule_entry->list);
+		list_add_tail(&rule_entry->list, &fw_policy_list->list);
+	}	
+	nm_mutex_unlock(&fw_policy_list->mutex);	
+	return 0;
+}
+
+static int vsecplat_del_policy(struct forward_rules *forward_rules)
+{
+	struct list_head *pos=NULL, *n=NULL;
+	struct rule_entry *rule_entry=NULL, *pos_entry=NULL;
+	int rule_idx=0;	
+	nm_mutex_lock(&fw_policy_list->mutex);
+	for(rule_idx=0;rule_idx<forward_rules->rule_num;rule_idx++){
+		rule_entry = forward_rules->rule_entry+rule_idx;	
+		list_for_each_safe(pos, n, &fw_policy_list->list){
+			pos_entry = list_entry(pos, struct rule_entry, list);
+			if(rule_entry->id == pos_entry->id){
+				list_del(&pos_entry->list);
+				free(pos_entry);
+				break;
+			}
+		}
+	}
+	nm_mutex_unlock(&fw_policy_list->mutex);
+	free(forward_rules->rule_entry);
+
+	return 0;
+}
+
 int vsecplat_parse_policy(const char *buf)
 {
+	struct forward_rules *forward_rules=NULL;
 	struct rte_json *json=NULL, *item=NULL;
 	int action=0;
-	
-	struct forward_rules *forward_rules=NULL;
-	
+	int ret=0;	
+
 	json = rte_parse_json(buf);
 	if(NULL==json){
 		printf("Failed to parse policy json.\n");
@@ -274,18 +309,44 @@ int vsecplat_parse_policy(const char *buf)
 	}
 	switch(action){
 		case ADD_RULE:
+			ret = vsecplat_add_policy(forward_rules);		
 			break;
 		case DEL_RULE:
+			ret = vsecplat_del_policy(forward_rules);		
 			break;
 		default:
 			break;
 	}
 
+	free(forward_rules);
 	rte_destroy_json(json);
 	return 0;
 out:
 	rte_destroy_json(json);
 	return -1;
+}
+
+/*
+ * return 
+ * 	0: not permit forward 
+ * 	1: permit
+ **/
+int get_forward_policy(struct nm_skb *skb)
+{
+	return 0;
+}
+
+int init_policy_list(void)
+{
+	fw_policy_list = (struct forward_rules_head *)malloc(sizeof(struct forward_rules_head));	
+	if(NULL==fw_policy_list){
+		return -1;
+	}
+	memset(fw_policy_list, 0, sizeof(struct forward_rules_head));
+	INIT_LIST_HEAD(&fw_policy_list->list);
+	nm_mutex_init(&fw_policy_list->mutex);
+
+	return 0;
 }
 
 int test_policy_parse(void)

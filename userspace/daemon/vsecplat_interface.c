@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include "nm_dev.h"
 #include "vsecplat_config.h"
 #include "vsecplat_interface.h"

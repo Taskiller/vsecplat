@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -87,14 +88,14 @@ int send_policy(int sock)
 int msg_deal(struct thread *thread)
 {
 	int sock = THREAD_FD(thread);
-	void *readbuf=NULL;
+	char *readbuf=NULL;
 	int readlen;
 
 	printf("In msg_deal\n");	
 	readbuf = malloc(4096);
 	memset(readbuf, 0, 4096);
 
-	readlen = read(sock, readbuf, 4096);
+	readlen = read(sock, (void *)readbuf, 4096);
 	if(readlen<=0){
 		// 
 		return 0;

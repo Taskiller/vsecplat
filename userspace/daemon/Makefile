@@ -14,7 +14,7 @@ target_OBJECTS = objs/daemon.o \
 server_OBJECTS = objs/server.o \
 				 objs/thread.o
 
-CFLAGS = -g 
+CFLAGS = -g -Wall
 CC = gcc
 NM = nm
 INCLUDES= -I../include/ -I$(root_dir)/include/

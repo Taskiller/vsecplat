@@ -8,6 +8,7 @@ struct record_entry{
 	u32 sport;
 	u32 dport;
 	u32 proto;
+	u16 vlanid;
 	u64 count;
 };
 
