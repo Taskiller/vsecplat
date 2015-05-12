@@ -8,23 +8,30 @@
  * 	3: 10.0.0.1-10.0.0.25
  * 	4: 10.0.0.1|10.0.0.11|10.0.0.23
  **/
+enum{
+	IP_HOST,
+	IP_NET,
+	IP_RANGE,
+	IP_GROUP
+};
 struct addr_obj{
 	int type;
-	u32 host_ip;
+	struct in_addr host_ip;
 	struct{
-		u32 min;
-		u32 max;
+		struct in_addr min;
+		struct in_addr max;
 	}range;
 	struct {
-		u32 mask;
-		u32 len;
+		struct in_addr mask;
+		int len;
 	}net;
 	struct{
-		u32 ip_addrs[16];
+		struct in_addr ip_addrs[16];
 	}group;
 };
 
 struct rule_entry{
+	int id;
 	int forward;
 	struct addr_obj sip;
 	struct addr_obj dip;
