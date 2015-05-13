@@ -4,6 +4,7 @@
 #define VSECPLATFORM_CFG_FILE "./config.json"
 struct vsecplat_config *global_vsecplat_config;
 
+#if 0
 static int str_to_mac(const char *bufp, char *ptr)
 {
 	int i, j;
@@ -39,6 +40,7 @@ static int str_to_mac(const char *bufp, char *ptr)
 
 	return *bufp; /* Error if we don't end at end of string. */
 }
+#endif
 
 int parse_vsecplat_config(void)
 {

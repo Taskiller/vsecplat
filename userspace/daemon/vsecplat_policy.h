@@ -19,17 +19,17 @@ enum{
 };
 struct addr_obj{
 	int type;
-	struct in_addr host_ip;
+	u32 host_ip;
 	struct{
-		struct in_addr min;
-		struct in_addr max;
+		u32 min;
+		u32 max;
 	}range;
 	struct {
-		struct in_addr mask;
-		int len;
+		u32 mask;
+		u32 length;
 	}net;
 	struct{
-		struct in_addr ip_addrs[16];
+		u32 ip_addrs[16];
 	}group;
 };
 

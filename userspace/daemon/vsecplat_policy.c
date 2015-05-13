@@ -57,11 +57,36 @@ static inline int bad_ip_address(char *str)
   	return 1;
 }
 
+static unsigned char maskbit[] = {0x00, 0x80, 0xc0, 0xe0, 0xf0,  0xf8, 0xfc, 0xfe, 0xff};
+static void masklen2ip(int masklen, struct in_addr *netmask)
+{
+	u8 *pnt;
+	int bit;
+	int offset; 
+
+	memset (netmask, 0, sizeof (struct in_addr));
+	pnt = (unsigned char *) netmask; 
+	
+	offset = masklen / 8;
+	bit = masklen % 8; 
+	
+	while (offset--){
+		*pnt++ = 0xff;
+	} 
+
+	if (bit){
+    	*pnt = maskbit[bit];
+	}
+
+  return;
+}
+
 static int get_addr_obj_from_str(struct addr_obj *obj, const char *str)
 {
 	char *pos=NULL;
 	char *cp=NULL;
-	int len=0;
+	int len=0, val=0;
+	struct in_addr addr;
 
 	if(NULL!=(pos=strchr(str, '/'))){ // XX.XX.XX.XX/N
 		obj->type = IP_NET;
@@ -73,9 +98,12 @@ static int get_addr_obj_from_str(struct addr_obj *obj, const char *str)
 		}
 		strncpy(cp, str, len);
 		*(cp+len)='\0';
-		inet_aton(cp, &obj->net.mask);
+		inet_aton(cp, &addr);
+		obj->net.mask = addr.s_addr;
 		free(cp);
-		obj->net.len = atoi(++pos);
+		val = atoi(++pos);
+		masklen2ip(val, &addr);	
+		obj->net.length = addr.s_addr;
 	}else if(NULL!=(pos=strchr(str, '-'))){ // XX.XX.XX.XX-YY.YY.YY.YY
 		obj->type = IP_RANGE;
 		len = pos-str;	
@@ -86,10 +114,12 @@ static int get_addr_obj_from_str(struct addr_obj *obj, const char *str)
 		}
 		strncpy(cp, str, len);
 		*(cp+len)='\0';
-		inet_aton(cp, &obj->range.min);
+		inet_aton(cp, &addr);
+		obj->range.min = addr.s_addr;
 		free(cp);
 		pos++;
-		inet_aton(pos, &obj->range.max);
+		inet_aton(pos, &addr);
+		obj->range.max = addr.s_addr;
 	}else if(NULL!=(pos=strchr(str, '|'))){ // XX.XX.XX.XX |YY.YY.YY.YY
 		obj->type = IP_GROUP;
 		const char *tmp=str;
@@ -103,7 +133,8 @@ static int get_addr_obj_from_str(struct addr_obj *obj, const char *str)
 			}
 			strncpy(cp, tmp, len);
 			*(cp+len)='\0';
-			inet_aton(cp, &obj->group.ip_addrs[idx]);
+			inet_aton(cp, &addr);
+			obj->group.ip_addrs[idx] = addr.s_addr;
 			free(cp);
 			idx++;
 			tmp=pos+1;
@@ -118,7 +149,8 @@ static int get_addr_obj_from_str(struct addr_obj *obj, const char *str)
 		}while(NULL!=pos);
 	}else{ //single ip addr, XX.XX.XX.XX
 		obj->type = IP_HOST;
-		inet_aton(str, &obj->host_ip);
+		inet_aton(str, &addr);
+		obj->host_ip = addr.s_addr;
 	}
 	return 0;
 }
@@ -320,7 +352,8 @@ int vsecplat_parse_policy(const char *buf)
 
 	free(forward_rules);
 	rte_destroy_json(json);
-	return 0;
+
+	return ret;
 out:
 	rte_destroy_json(json);
 	return -1;
@@ -331,6 +364,33 @@ out:
  **/
 static int test_match_addr_obj(struct addr_obj *addr_obj, const u32 ip)
 {
+	int i=0;
+	switch(addr_obj->type){
+		case IP_HOST:
+			if(addr_obj->host_ip==ip){
+				return 1;
+			}
+			break;
+		case IP_NET:
+			if((addr_obj->net.mask & addr_obj->net.length)==(ip&addr_obj->net.length)){
+				return 1;
+			}
+			break;
+		case IP_RANGE:
+			if((addr_obj->range.min<=ip)&&(addr_obj->range.max>=ip)){
+				return 1;
+			}
+			break;
+		case IP_GROUP:
+			for(i=0;i<16;i++){
+				if(ip==addr_obj->group.ip_addrs[i]){
+					return 1;
+				}
+			}
+			break;
+		default:
+			break;
+	}
 	return 0;
 }
 
@@ -343,7 +403,6 @@ int get_forward_policy(struct nm_skb *skb)
 {
 	struct list_head *pos;
 	struct rule_entry *rule_entry=NULL;
-	int ret=0;
 	
 	u32 saddr=0,daddr=0;
 	u16 sport=0,dport=0,proto=0,vlanid=0;	
@@ -352,10 +411,10 @@ int get_forward_policy(struct nm_skb *skb)
 	daddr = skb->nh.iph->daddr;
 	proto = skb->nh.iph->protocol;
 	vlanid = skb->vlanid;
-	if(proto==6){
+	if(proto==6){ // UDP
 		sport = skb->h.uh->source;
 		dport = skb->h.uh->dest;
-	}else if(proto==17){
+	}else if(proto==17){ // TCP
 		sport = skb->h.th->source;
 		dport = skb->h.th->dest;
 	}
