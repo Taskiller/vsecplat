@@ -29,9 +29,11 @@ static u32 record_hash(struct record_entry *tmp)
 	return (jhash_3words(tmp->sip, tmp->dip, tmp->sport|(tmp->dport<<16), 0) % VSECPLAT_RECORD_HASH_SIZE);
 }
 
-static int test_record_match(const struct record_entry *entry, const struct record_entry *tmp)
+static inline int test_record_match(const struct record_entry *entry, const struct record_entry *tmp)
 {
-	return 0;
+	return ((entry->sip==tmp->sip)&&(entry->dip==tmp->dip)&&
+	   (entry->sport==tmp->sport)&&(entry->dport==tmp->dport)&&
+	   (entry->vlanid==tmp->vlanid));
 }
 
 int vsecplat_record_pkt(struct nm_skb *skb)

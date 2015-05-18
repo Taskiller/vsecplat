@@ -83,6 +83,7 @@ make_libnetmap()
 	cd $root_dir/userspace/lib
 	make
 	cp -af libnetmap.so $root_dir/rootfs/lib64/
+	cp -af libnetmap.so /lib64/
 }
 
 make_daemon()
