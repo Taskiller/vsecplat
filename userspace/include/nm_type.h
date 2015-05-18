@@ -35,4 +35,8 @@ typedef unsigned int 	u32;
 typedef signed long 	s64;
 typedef unsigned long 	u64;
 
+typedef __u16 __be16;
+typedef __u32 __be32;
+typedef __u16 __le16;
+
 #endif

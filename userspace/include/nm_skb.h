@@ -48,6 +48,7 @@ struct nm_skb{
 		unsigned char *raw;
 	}mac;
 
+	__be16 protocol;
 	unsigned short vlanid;
 };
 
@@ -63,4 +64,7 @@ void nm_free_skb(struct nm_skb *skb);
 
 void nm_tx_skb_push(struct nm_skb *skb);
 void nm_tx_skb_pop(void);
+
+unsigned char *nm_skb_pull(struct nm_skb *skb, unsigned int len);
+unsigned char *nm_skb_push(struct nm_skb *skb, unsigned int len);
 #endif
