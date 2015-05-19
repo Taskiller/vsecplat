@@ -6,6 +6,9 @@
 #include "nm_udp.h"
 #include "nm_tcp.h"
 
+#define NM_PKT_FORWARD 	0
+#define NM_PKT_DROP 	1
+
 struct nm_skb{
 	struct list_head node;
 	struct nm_skb *next;

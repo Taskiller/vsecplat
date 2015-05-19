@@ -14,4 +14,7 @@ int init_vsecplat_interface_list(void);
 struct vsecplat_interface *vsecplat_get_interface_by_mac(char *mac);
 struct vsecplat_interface *vsecplat_get_interface_by_name(char *name);
 
+int setup_mgt_interface(void);
+int setup_dp_interfaces(void);
+
 #endif

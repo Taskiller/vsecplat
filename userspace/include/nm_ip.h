@@ -1,5 +1,8 @@
 #ifndef __NM_IP_H__
 #define __NM_IP_H__
+
+#include "nm_type.h"
+
 struct iphdr{
 #if defined(__LITTLE_ENDIAN_BITFIELD)
 	u8 ihl:4,

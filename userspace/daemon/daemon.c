@@ -11,18 +11,20 @@
 
 #include "thread.h"
 #include "msg_comm.h"
+#include "packet.h"
 #include "vsecplat_config.h"
 #include "vsecplat_interface.h"
+#include "vsecplat_status.h"
 
 struct thread_master *master=NULL;
 int main(void)
 {
-	test_policy_parse();
-#if 0
+	// test_policy_parse();
 	int ret=0;
+#if 0
 	int sock=0;
 	struct thread thread;
-
+#endif
 
 	// parse configfile and init global descriptor
 	ret = parse_vsecplat_config();	
@@ -54,7 +56,6 @@ int main(void)
 		printf("Failed to init vsecplat status.\n");
 		return -1;
 	}
-#endif
 
 #if 0
 //	ret = fork();
@@ -73,14 +74,12 @@ int main(void)
 		while(thread_fetch(master, &thread)){
 			thread_call(&thread);
 		}
-	}
-#if 0
-	else{
+	} else
+#endif
+	{
 		// In child process, will deal with the packet
 		packet_handle_loop();
 	}
-#endif
-#endif
 
 	return 0;
 }

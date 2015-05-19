@@ -116,23 +116,19 @@ struct vsecplat_interface *vsecplat_get_interface_by_name(char *name)
 
 int setup_mgt_interface(void)
 {
-#if 0
 	struct vsecplat_interface *ifp = NULL;	
-#endif
 	FILE *cmd_file=NULL;
 	char cmd_buf[64];
 
-#if 0
-	ifp = vsecplat_get_interface_by_mac(global_vsecplat_config->mgt_cfg->mac);	
+	ifp = vsecplat_get_interface_by_name(global_vsecplat_config->mgt_cfg->name);	
 	if(NULL==ifp){
+		// TODO: no interface named as mgt
 		return -1;
 	}
 	printf("find mgt interface : %s\n", ifp->name);
 	memset(cmd_buf, 0, 64);					
-#endif
 
-	sprintf(cmd_buf, "ifconfig %s %s up", 
-		global_vsecplat_config->mgt_cfg->name, global_vsecplat_config->mgt_cfg->ipaddr);
+	sprintf(cmd_buf, "ifconfig %s %s up", ifp->name, global_vsecplat_config->mgt_cfg->ipaddr);
 	printf("Will exec cmd: %s\n", cmd_buf);
 
 	cmd_file = popen(cmd_buf, "r");
@@ -159,11 +155,10 @@ int setup_dp_interfaces(void)
 	}
 
 	for(idx=0;idx<inport_num; idx++){
-	#if 0
-		ifp = vsecplat_get_interface_by_mac(global_vsecplat_config->inport_list[idx].mac);
-	#endif
-		ifp = vsecplat_get_interface_by_name(global_vsecplat_config->inport_list[idx].name);
+		ifp = vsecplat_get_interface_by_name(global_vsecplat_config->inport_desc_array[idx].name);
 		if(NULL==ifp){
+			// TODO
+			printf("No interface named %s\n", global_vsecplat_config->inport_desc_array[idx].name);
 			return -1;
 		}
 		dev = nm_open_dev(ifp->name);
@@ -174,10 +169,7 @@ int setup_dp_interfaces(void)
 	}
 
 	for(idx=0;idx<outport_num;idx++){
-	#if 0
-		ifp = vsecplat_get_interface_by_mac(global_vsecplat_config->outport_list[idx].mac);
-	#endif
-		ifp = vsecplat_get_interface_by_name(global_vsecplat_config->outport_list[idx].name);
+		ifp = vsecplat_get_interface_by_name(global_vsecplat_config->outport_desc_array[idx].name);
 		if(NULL==ifp){
 			return -1;
 		}

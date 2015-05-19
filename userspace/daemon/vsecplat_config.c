@@ -69,7 +69,7 @@ int parse_vsecplat_config(void)
 	read(fd, file_buf, len);
 	close(fd);
 
-	global_vsecplat_config = malloc(sizeof(struct vsecplat_config));		
+	global_vsecplat_config = (struct vsecplat_config *)malloc(sizeof(struct vsecplat_config));		
 	if(NULL==global_vsecplat_config){
 		free(file_buf);
 		return -1;
@@ -84,7 +84,7 @@ int parse_vsecplat_config(void)
 
 	item = rte_object_get_item(json, "mgt_cfg");	
 	if(NULL!=item){
-		struct mgt_cfg *mgt_cfg = malloc(sizeof(struct mgt_cfg));			
+		struct mgt_cfg *mgt_cfg = (struct mgt_cfg *)malloc(sizeof(struct mgt_cfg));			
 		if(NULL==mgt_cfg){
 			// TODO
 			goto out;
@@ -117,7 +117,7 @@ int parse_vsecplat_config(void)
 
 	item = rte_object_get_item(json, "serv_cfg");
 	if(NULL!=item){
-		struct serv_cfg *serv_cfg = malloc(sizeof(struct serv_cfg));	
+		struct serv_cfg *serv_cfg = (struct serv_cfg *)malloc(sizeof(struct serv_cfg));	
 		if(NULL==serv_cfg){
 			// TODO
 			goto out;
@@ -145,27 +145,18 @@ int parse_vsecplat_config(void)
 			goto out;
 		}
 		global_vsecplat_config->inport_num = rte_array_get_size(item);
-		global_vsecplat_config->inport_list = malloc(global_vsecplat_config->inport_num * sizeof(struct inport_list));
-		if(NULL==global_vsecplat_config->inport_list){
+		global_vsecplat_config->inport_desc_array = (struct inport_desc *)malloc(global_vsecplat_config->inport_num * sizeof(struct inport_desc));
+		if(NULL==global_vsecplat_config->inport_desc_array){
 			//TODO
 			goto out;
 		}
-		memset(global_vsecplat_config->inport_list, 0, sizeof(struct inport_list)*global_vsecplat_config->inport_num);
+		memset(global_vsecplat_config->inport_desc_array, 0, sizeof(struct inport_desc)*global_vsecplat_config->inport_num);
 		for(idx=0;idx<global_vsecplat_config->inport_num;idx++){
 			entry = rte_array_get_item(item, idx);
 			if(NULL==entry){
 				// TODO
 				goto out;
 			}
-		#if 0
-			tmp = rte_object_get_item(entry, "mac");
-			if(NULL==tmp){
-				// TODO
-				goto out;
-			}
-			// strncpy(global_vsecplat_config->inport_list[idx].mac, tmp->u.val_str, NM_ADDR_STR_LEN);
-			str_to_mac(tmp->u.val_str, global_vsecplat_config->inport_list[idx].mac);	
-		#endif
 			tmp = rte_object_get_item(entry, "name");
 			if(NULL==tmp){
 				// TODO
@@ -175,7 +166,7 @@ int parse_vsecplat_config(void)
 				// TODO
 				goto out;
 			}
-			strncpy(global_vsecplat_config->inport_list[idx].name, tmp->u.val_str, NM_NAME_LEN); 
+			strncpy(global_vsecplat_config->inport_desc_array[idx].name, tmp->u.val_str, NM_NAME_LEN); 
 		}
 	}
 
@@ -187,12 +178,12 @@ int parse_vsecplat_config(void)
 		}
 
 		global_vsecplat_config->outport_num = rte_array_get_size(item);
-		global_vsecplat_config->outport_list = malloc(global_vsecplat_config->outport_num * sizeof(struct outport_list));		
-		if(NULL==global_vsecplat_config->outport_list){
+		global_vsecplat_config->outport_desc_array = (struct outport_desc *)malloc(global_vsecplat_config->outport_num * sizeof(struct outport_desc));		
+		if(NULL==global_vsecplat_config->outport_desc_array){
 			// TODO
 			goto out;
 		}
-		memset(global_vsecplat_config->outport_list, 0, sizeof(struct outport_list)*global_vsecplat_config->outport_num);
+		memset(global_vsecplat_config->outport_desc_array, 0, sizeof(struct outport_desc)*global_vsecplat_config->outport_num);
 		for(idx=0;idx<global_vsecplat_config->outport_num;idx++){
 			entry = rte_array_get_item(item, idx);
 			if(NULL==entry){
@@ -208,7 +199,7 @@ int parse_vsecplat_config(void)
 				// TODO
 				goto out;
 			}
-			strncpy(global_vsecplat_config->outport_list[idx].name, tmp->u.val_str, NM_NAME_LEN); 
+			strncpy(global_vsecplat_config->outport_desc_array[idx].name, tmp->u.val_str, NM_NAME_LEN); 
 		}
 	}
 

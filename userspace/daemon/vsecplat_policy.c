@@ -262,7 +262,11 @@ static struct forward_rules *get_forward_rules(struct rte_json *json)
 		if(tmp->type != JSON_INTEGER){
 			goto out;
 		}
-		rule_entry->forward = tmp->u.val_int;
+		if(0==tmp->u.val_int){ /* 0: drop, 1: forward */
+			rule_entry->forward = NM_PKT_DROP;
+		}else{
+			rule_entry->forward = NM_PKT_FORWARD;
+		}
 	}
 	return forward_rules;
 out:
@@ -396,8 +400,8 @@ static int test_match_addr_obj(struct addr_obj *addr_obj, const u32 ip)
 
 /*
  * return 
- * 	0: not permit forward 
- * 	1: permit
+ * 	0: permit forward 
+ * 	1: drop
  **/
 int get_forward_policy(struct nm_skb *skb)
 {
@@ -447,7 +451,7 @@ int get_forward_policy(struct nm_skb *skb)
 
 not_match:
 	nm_mutex_unlock(&fw_policy_list->mutex);	
-	return 1;
+	return NM_PKT_DROP;
 }
 
 int init_policy_list(void)
