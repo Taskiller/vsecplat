@@ -1,5 +1,6 @@
 #include <ctype.h>
 #include "nm_dev.h"
+#include "nm_desc.h"
 #include "vsecplat_config.h"
 #include "vsecplat_interface.h"
 
@@ -148,6 +149,10 @@ int setup_dp_interfaces(void)
 	struct nm_dev *dev=NULL;
 	struct vsecplat_interface *ifp=NULL;
 
+	if(nm_desc_init()){
+		return -1;
+	}
+
 	global_dp_interface_array = malloc((inport_num+outport_num)*sizeof(void *));
 	if(NULL==global_dp_interface_array){
 		printf("failed to alloc dataplane interfaces discriptor.\n");
@@ -165,7 +170,9 @@ int setup_dp_interfaces(void)
 		if(NULL==dev){
 			return -1;
 		}
+		nm_registe_dev(dev);
 		global_dp_interface_array[idx] = dev;
+
 	}
 
 	for(idx=0;idx<outport_num;idx++){
@@ -177,6 +184,7 @@ int setup_dp_interfaces(void)
 		if(NULL==dev){
 			return -1;
 		}
+		nm_registe_dev(dev);
 		global_dp_interface_array[inport_num+idx] = dev;
 	}
 

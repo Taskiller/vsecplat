@@ -3,8 +3,6 @@
 	"serv_cfg":{"ipaddr":"127.0.0.1", "port":8000},
 	"inport_list":[
 		{"name":"eth1"},
-		{"name":"eth2"},
-		{"name":"eth3"}
 	],
-	"outport_list":[{"name":"eth4"}]
+	"outport_list":[{"name":"eth2"}]
 }
