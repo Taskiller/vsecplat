@@ -48,7 +48,7 @@ int vsecplat_record_pkt(struct nm_skb *skb)
 		//TODO
 		return -1;
 	}
-	memset(&tmp, 0, sizeof(struct record_entry));
+	memset(tmp, 0, sizeof(struct record_entry));
 	INIT_LIST_HEAD(&tmp->list);
 	tmp->sip = skb->nh.iph->saddr;
 	tmp->dip = skb->nh.iph->daddr;

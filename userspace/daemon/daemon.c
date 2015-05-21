@@ -57,6 +57,12 @@ int main(void)
 		return -1;
 	}
 
+	ret = vsecplat_init_record_bucket();
+	if(ret<0){
+		printf("Failed to init record bucket.\n");
+		return -1;
+	}
+
 #if 0
 //	ret = fork();
 

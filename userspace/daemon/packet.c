@@ -91,7 +91,7 @@ int packet_handle_loop(void)
 	do{
 		skb = nm_recv();
 		if(NULL==skb){
-			return -1;
+			continue;
 		}
 		
 		ret = packet_intercept(skb);
