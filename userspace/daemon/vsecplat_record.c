@@ -83,5 +83,19 @@ int vsecplat_record_pkt(struct nm_skb *skb)
 	return 0;
 }
 
+char *persist_record(void)
+{
+	int idx=0;
+	struct record_bucket *bucket=NULL;
+	for(idx=0;idx<VSECPLAT_RECORD_HASH_SIZE;idx++){
+		bucket = record_bucket_hash + idx;	
+		nm_mutex_lock(&bucket->mutex);
+		// TODO 
+		nm_mutex_unlock(&bucket->mutex);
+	}
+
+	return NULL;
+}
+
 
 

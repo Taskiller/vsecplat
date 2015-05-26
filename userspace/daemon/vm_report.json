@@ -1,8 +1,11 @@
-[
-	{"sip":"10.0.0.1", "dip":"10.0.0.2", "sport":1, "dport":2, "vlan":0, "count":1234},
-	{"sip":"10.0.0.1", "dip":"10.0.0.2", "sport":1, "dport":3, "vlan":0, "count":2123},
-	{"sip":"10.0.0.1", "dip":"10.0.0.2", "sport":1, "dport":4, "vlan":0, "count":221},
-	{"sip":"10.0.0.1", "dip":"10.0.0.2", "sport":22, "dport":2, "vlan":0, "count":111},
-	{"sip":"10.0.0.1", "dip":"10.0.0.3", "sport":1, "dport":2, "vlan":0, "count":102},
-	{"sip":"10.0.0.2", "dip":"10.0.0.1", "sport":1, "dport":2, "vlan":0, "count":1123},
-]
+{
+"report_time":"2015-12-26 18:20:30",
+"record_list":[
+	{"sip":"10.0.0.1", "dip":"10.0.0.2", "sport":1, "dport":2, "proto":0, "vlan":0, "count":1234},
+	{"sip":"10.0.0.1", "dip":"10.0.0.2", "sport":1, "dport":3, "proto":1, "vlan":0, "count":2123},
+	{"sip":"10.0.0.1", "dip":"10.0.0.2", "sport":1, "dport":4, "proto":2, "vlan":0, "count":221},
+	{"sip":"10.0.0.1", "dip":"10.0.0.2", "sport":22, "dport":2, "proto":3, "vlan":0, "count":111},
+	{"sip":"10.0.0.1", "dip":"10.0.0.3", "sport":1, "dport":2, "proto":4, "vlan":0, "count":102},
+	{"sip":"10.0.0.2", "dip":"10.0.0.1", "sport":1, "dport":2, "proto":5, "vlan":0, "count":1123}
+	]
+}

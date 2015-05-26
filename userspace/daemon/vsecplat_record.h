@@ -14,6 +14,7 @@ struct record_entry{
 	u32 proto;
 	u16 vlanid;
 	u64 count;
+	u64 timestamp;
 };
 
 struct record_bucket{
@@ -35,4 +36,7 @@ int vsecplat_record_pkt(struct nm_skb *skb);
 		 }										\
 		 (type)__j;								\
 		 })
+
+char *persist_record(void);
+
 #endif
