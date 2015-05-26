@@ -451,6 +451,7 @@ int get_forward_policy(struct nm_skb *skb)
 
 not_match:
 	nm_mutex_unlock(&fw_policy_list->mutex);	
+	// return NM_PKT_FORWARD;
 	return NM_PKT_DROP;
 }
 
