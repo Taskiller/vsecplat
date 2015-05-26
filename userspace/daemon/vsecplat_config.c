@@ -4,8 +4,7 @@
 #define VSECPLATFORM_CFG_FILE "/usr/local/config.json"
 struct vsecplat_config *global_vsecplat_config;
 
-#if 0
-static int str_to_mac(const char *bufp, char *ptr)
+static int str_to_mac(const char *bufp, unsigned char *ptr)
 {
 	int i, j;
 	unsigned char val;
@@ -40,7 +39,6 @@ static int str_to_mac(const char *bufp, char *ptr)
 
 	return *bufp; /* Error if we don't end at end of string. */
 }
-#endif
 
 int parse_vsecplat_config(void)
 {
@@ -103,15 +101,6 @@ int parse_vsecplat_config(void)
 			goto out;
 		}
 		strncpy(mgt_cfg->ipaddr, tmp->u.val_str, NM_ADDR_STR_LEN);
-	#if 0
-		tmp = rte_object_get_item(item, "mac");
-		if(NULL==tmp){
-			// TODO
-			goto out;
-		}
-		// strncpy(mgt_cfg->mac, tmp->u.val_str, NM_ADDR_STR_LEN);
-		str_to_mac(tmp->u.val_str, mgt_cfg->mac);
-	#endif
 		global_vsecplat_config->mgt_cfg = mgt_cfg;
 	}
 
@@ -200,6 +189,16 @@ int parse_vsecplat_config(void)
 				goto out;
 			}
 			strncpy(global_vsecplat_config->outport_desc_array[idx].name, tmp->u.val_str, NM_NAME_LEN); 
+
+			tmp = rte_object_get_item(entry, "dst_mac");
+			if(NULL==tmp){
+				continue;
+			}
+			if(tmp->type != JSON_STRING){
+				// TODO
+				goto out;
+			}
+			str_to_mac(tmp->u.val_str, global_vsecplat_config->outport_desc_array[idx].dst_mac);	
 		}
 	}
 

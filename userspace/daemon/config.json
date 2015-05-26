@@ -4,5 +4,5 @@
 	"inport_list":[
 		{"name":"eth1"},
 	],
-	"outport_list":[{"name":"eth2"}]
+	"outport_list":[{"name":"eth2", "dst_mac":"52:00:00:00:01:01"}]
 }

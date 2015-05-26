@@ -118,7 +118,7 @@ if [ $# -eq 0 ]; then
 	make_drivers
 	make_libnetmap
 	make_daemon
-	make_example
+	# make_example
 	make_images
 else
 	while [ $# -gt 0 ]

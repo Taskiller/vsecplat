@@ -1,3 +1,4 @@
+#include "nm_ether.h"
 #include "nm_jhash.h"
 #include "vsecplat_record.h"
 
@@ -40,35 +41,41 @@ int vsecplat_record_pkt(struct nm_skb *skb)
 {
 	u32 hash=0;
 	struct record_bucket *bucket=NULL;
-	struct record_entry *entry=NULL;
 	struct record_entry *tmp=NULL;	
+	struct record_entry entry;
 
-	tmp = (struct record_entry *)malloc(sizeof(struct record_entry));
-	if(NULL==tmp){
-		//TODO
-		return -1;
+	if(ntohs(skb->protocol)!=ETH_P_IP){
+		return 0;
 	}
-	memset(tmp, 0, sizeof(struct record_entry));
-	INIT_LIST_HEAD(&tmp->list);
-	tmp->sip = skb->nh.iph->saddr;
-	tmp->dip = skb->nh.iph->daddr;
-	tmp->proto = skb->nh.iph->protocol;
-	if(tmp->proto==6){
-		tmp->sport = skb->h.uh->source;
-		tmp->dport = skb->h.uh->dest;
-	}else if(tmp->proto==17){
-		tmp->sport = skb->h.th->source;
-		tmp->dport = skb->h.th->dest;
-	}
-	tmp->vlanid = skb->vlanid;
 
-	hash = record_hash(tmp);
+	memset(&entry, 0, sizeof(struct record_entry));
+	INIT_LIST_HEAD(&entry.list);
+	entry.sip = skb->nh.iph->saddr;
+	entry.dip = skb->nh.iph->daddr;
+	entry.proto = skb->nh.iph->protocol;
+	if(entry.proto==6){
+		entry.sport = skb->h.uh->source;
+		entry.dport = skb->h.uh->dest;
+	}else if(entry.proto==17){
+		entry.sport = skb->h.th->source;
+		entry.dport = skb->h.th->dest;
+	}
+	entry.vlanid = skb->vlanid;
+
+	hash = record_hash(&entry);
 	bucket = record_bucket_hash + hash;
 	nm_mutex_lock(&bucket->mutex);
-	entry = LIST_FIND(&record_bucket_hash->list, test_record_match, struct record_entry *, tmp);
-	if(NULL!=entry){
-		entry->count++;
+	tmp = LIST_FIND(&record_bucket_hash->list, test_record_match, struct record_entry *, &entry);
+	if(NULL!=tmp){
+		tmp->count++;
 	}else{
+		tmp = (struct record_entry *)malloc(sizeof(struct record_entry));
+		if(NULL==tmp){
+			//TODO
+			nm_mutex_unlock(&bucket->mutex);
+			return -1;
+		}
+		memcpy(tmp, &entry, sizeof(struct record_entry));
 		tmp->count++;
 		list_add_tail(&bucket->list, &tmp->list);
 	}

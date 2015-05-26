@@ -11,7 +11,7 @@ static void dev_set_feature(const char *name)
 }
 
 extern struct nm_desc *global_nm_desc;
-struct nm_dev *nm_open_dev(char *name)
+struct nm_dev *nm_open_dev(const char *name)
 {
 	struct nm_dev *dev = NULL;
 	int fd = 0;
@@ -87,4 +87,3 @@ int nm_registe_dev(struct nm_dev *dev)
 
 	return 0;
 }
-

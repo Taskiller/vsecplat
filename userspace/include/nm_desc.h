@@ -18,6 +18,7 @@ struct nm_desc{
 	int fds_num;
 	struct pollfd fds[NM_MAX_NIC];
 	struct nm_dev *nm_dev[NM_MAX_NIC];
+
 	struct nm_tx_pool tx_pool;
 };
 

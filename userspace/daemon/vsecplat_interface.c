@@ -140,7 +140,6 @@ int setup_mgt_interface(void)
 	return 0;
 }
 
-static struct nm_dev **global_dp_interface_array=NULL;
 int setup_dp_interfaces(void)
 {
 	int inport_num = global_vsecplat_config->inport_num;
@@ -150,12 +149,6 @@ int setup_dp_interfaces(void)
 	struct vsecplat_interface *ifp=NULL;
 
 	if(nm_desc_init()){
-		return -1;
-	}
-
-	global_dp_interface_array = malloc((inport_num+outport_num)*sizeof(void *));
-	if(NULL==global_dp_interface_array){
-		printf("failed to alloc dataplane interfaces discriptor.\n");
 		return -1;
 	}
 
@@ -171,8 +164,7 @@ int setup_dp_interfaces(void)
 			return -1;
 		}
 		nm_registe_dev(dev);
-		global_dp_interface_array[idx] = dev;
-
+		global_vsecplat_config->inport_desc_array[idx].dev = dev;
 	}
 
 	for(idx=0;idx<outport_num;idx++){
@@ -185,8 +177,13 @@ int setup_dp_interfaces(void)
 			return -1;
 		}
 		nm_registe_dev(dev);
-		global_dp_interface_array[inport_num+idx] = dev;
+		global_vsecplat_config->outport_desc_array[idx].dev = dev;
 	}
 
 	return 0;
+}
+
+struct nm_dev *nm_get_output_dev(void)
+{
+	return global_vsecplat_config->outport_desc_array[0].dev;
 }

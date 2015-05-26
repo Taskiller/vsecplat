@@ -1,11 +1,11 @@
 #ifndef __VSECPLAT_CONFIG_H__
 #define __VSECPLAT_CONFIG_H__
 #include "nm_type.h"
+#include "nm_dev.h"
 
 struct mgt_cfg{
 	char name[NM_NAME_LEN];
 	char ipaddr[NM_ADDR_STR_LEN];
-//	char mac[NM_MAC_LEN];
 };
 
 struct serv_cfg{
@@ -14,13 +14,14 @@ struct serv_cfg{
 };
 
 struct inport_desc{
-//	char mac[NM_MAC_LEN];
 	char name[NM_NAME_LEN];
+	struct nm_dev *dev;
 };
 
 struct outport_desc{
 	char name[NM_NAME_LEN];
-	// char mac[NM_MAC_LEN];
+	unsigned char dst_mac[NM_MAC_LEN];
+	struct nm_dev *dev;
 };
 
 struct vsecplat_config{

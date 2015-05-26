@@ -2,6 +2,7 @@
 #include "nm_vlan.h"
 #include "nm_ether.h"
 #include "vsecplat_policy.h"
+#include "vsecplat_interface.h"
 #include "vsecplat_record.h"
 
 static inline void eth_type_trans(struct nm_skb *skb)
@@ -59,6 +60,7 @@ static int nm_vlan_recv(struct nm_skb *skb)
 
 	return ret;
 }
+
 static int packet_intercept(struct nm_skb *skb)
 {
 	int ret=NM_PKT_DROP;
@@ -83,6 +85,13 @@ static int packet_intercept(struct nm_skb *skb)
 	return ret;
 }
 
+static int packet_send(struct nm_skb *skb)
+{
+	skb->o_dev = nm_get_output_dev(); 
+	nm_send(skb);
+	return 0;
+}
+
 int packet_handle_loop(void)
 {
 	int ret=0;
@@ -96,7 +105,7 @@ int packet_handle_loop(void)
 		
 		ret = packet_intercept(skb);
 		if(ret==NM_PKT_FORWARD){
-			nm_send(skb);
+			packet_send(skb);
 		}
 	}while(1);
 
