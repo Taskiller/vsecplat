@@ -15,6 +15,7 @@
 #include "vsecplat_config.h"
 #include "vsecplat_interface.h"
 #include "vsecplat_status.h"
+#include "vsecplat_policy.h"
 #include "vsecplat_record.h"
 
 struct thread_master *master=NULL;
@@ -31,6 +32,13 @@ int main(void)
 	ret = parse_vsecplat_config();	
 	if(ret<0){
 		printf("Failed to parse vsecplat config.\n");
+		return -1;
+	}
+
+	// Init forward policy desc: fw_policy_list
+	ret = init_policy_list();
+	if(ret<0){
+		printf("Failed to init policy descriptor.\n");
 		return -1;
 	}
 

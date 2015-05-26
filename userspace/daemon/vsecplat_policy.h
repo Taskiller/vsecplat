@@ -59,7 +59,9 @@ struct forward_rules_head{
 #define ADD_RULE 1
 #define DEL_RULE 2
 
+int init_policy_list(void);
 int vsecplat_parse_policy(const char *buf);
 int get_forward_policy(struct nm_skb *skb);
+
 int test_policy_parse(void);
 #endif
