@@ -79,11 +79,12 @@ int vsecplat_deal_policy(struct thread *thread)
 
 int vsecplat_timer_func(struct thread *thread)
 {
-	printf("In vsecplat_timer_func\n");
 	int sock;
 	int ret;
 	struct sockaddr_in serv;
 	char buf[128];
+
+	printf("In vsecplat_timer_func\n");
 
 	switch(global_vsecplat_status->status){
 		case VSECPLAT_CONNECTING_SERV:

@@ -2,7 +2,7 @@
 	"mgt_cfg":{"name":"eth0", "ipaddr":"192.168.1.140/24"},
 	"serv_cfg":{"ipaddr":"127.0.0.1", "port":8000},
 	"inport_list":[
-		{"name":"eth1"},
+		{"name":"eth1"}
 	],
 	"outport_list":[{"name":"eth2", "dst_mac":"52:00:00:00:01:01"}]
 }

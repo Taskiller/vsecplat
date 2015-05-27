@@ -63,7 +63,7 @@ int send_policy(int sock)
 	printf("In send_policy\n");
 
 	memset(&stat_buf, 0, sizeof(struct stat));
-	stat("./policy.json", &stat_buf);
+	stat("./add_rule.json", &stat_buf);
 	len = stat_buf.st_size;
 	
 	file_buf = malloc(len);
@@ -71,7 +71,7 @@ int send_policy(int sock)
 		return -1;
 	}
 	memset(file_buf, 0, len);
-	fd = open("./policy.json", O_RDONLY);
+	fd = open("./add_rule.json", O_RDONLY);
 	if(fd<0){
 		free(file_buf);
 		return -1;

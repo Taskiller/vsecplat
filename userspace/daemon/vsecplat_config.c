@@ -1,7 +1,8 @@
 #include "rte_json.h"
 #include "vsecplat_config.h"
 
-#define VSECPLATFORM_CFG_FILE "/usr/local/config.json"
+// #define VSECPLATFORM_CFG_FILE "/usr/local/config.json"
+#define VSECPLATFORM_CFG_FILE "./config.json"
 struct vsecplat_config *global_vsecplat_config;
 
 static int str_to_mac(const char *bufp, unsigned char *ptr)
@@ -61,6 +62,7 @@ int parse_vsecplat_config(void)
 	memset(file_buf, 0, len);
 	fd = open(VSECPLATFORM_CFG_FILE, O_RDONLY);
 	if(fd<0){
+		printf("Failed to open vsecplat config file.\n");
 		free(file_buf);
 		return -1;
 	}

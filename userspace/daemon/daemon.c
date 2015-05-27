@@ -25,8 +25,6 @@ int main(void)
 	int sock=0;
 	struct thread thread;
 
-#if 0
-
 	// parse configfile and init global descriptor: global_vsecplat_config
 	ret = parse_vsecplat_config();	
 	if(ret<0){
@@ -41,6 +39,7 @@ int main(void)
 		return -1;
 	}
 
+#if 0
 	// init global interface list: vsecplat_interface_list
 	ret = init_vsecplat_interface_list();
 	if(ret<0){
