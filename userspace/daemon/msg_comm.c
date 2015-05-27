@@ -8,6 +8,7 @@
 
 #include "vsecplat_status.h"
 #include "vsecplat_config.h"
+#include "vsecplat_record.h"
 #include "msg_comm.h"
 
 int init_sock(char *ipaddr, int port)
@@ -58,19 +59,33 @@ int vsecplat_deal_policy(struct thread *thread)
 	int serv_sock = THREAD_FD(thread);
 	int readlen=0;	
 	char *readbuf = NULL;
+	struct msg_head *msg=NULL;
 
-	readbuf = malloc(4096);
+	readbuf = malloc(2048);
 	if(NULL==readbuf){
 		return -1;
 	}
 
-	memset(readbuf, 0, 4096);
-	readlen = read(serv_sock, readbuf, 4096);
+	memset(readbuf, 0, 2048);
+	readlen = read(serv_sock, readbuf, 2048);
 	if(readlen<=0){
 		return -1;
 	}
+	msg = (struct msg_head *)readbuf;
+	if(msg->len != readlen){
+		// TODO
+	}
 
-	printf("readlen=%d, policy:%s\n", readlen, readbuf);
+	printf("vsecplat_deal_policy readlen=%d, msg len=%d type=%d policy:%s\n", readlen, msg->len, msg->msg_type, msg->data);
+
+	switch(msg->msg_type){
+		case NM_ADD_RULES:
+			break;
+		case NM_DEL_RULES:
+			break;
+		default:
+			break;
+	}
 
 	thread_add_read(master, vsecplat_deal_policy, NULL, global_vsecplat_status->serv_sock);	
 	free(readbuf);
@@ -81,14 +96,15 @@ int vsecplat_timer_func(struct thread *thread)
 {
 	int sock;
 	int ret;
+	int timeout=5;
 	struct sockaddr_in serv;
-	char buf[128];
-
+	struct msg_head *msg=NULL;
+	char *str=NULL;
+	int len=0;
 	printf("In vsecplat_timer_func\n");
 
 	switch(global_vsecplat_status->status){
 		case VSECPLAT_CONNECTING_SERV:
-			memset(buf, 0, 128);
 			sock = socket(AF_INET, SOCK_STREAM, 0);
 			if(sock<0){
 				goto out;
@@ -108,20 +124,48 @@ int vsecplat_timer_func(struct thread *thread)
 			global_vsecplat_status->serv_sock = sock;
 
 			break;
-
 		case VSECPLAT_CONNECT_OK:
-			sprintf(buf, "%s", "get policy");
-			send(global_vsecplat_status->serv_sock, buf, strlen(buf), 0);
-
+			msg = (struct msg_head *)malloc(sizeof(struct msg_head));
+			if(NULL==msg){
+				//TODO
+			}
+			memset(msg, 0, sizeof(struct msg_head));
+			msg->len = sizeof(struct msg_head);
+			msg->msg_type = NM_GET_RULES;
+			printf("send msg len %d, type %d.\n", msg->len, msg->msg_type);
+			send(global_vsecplat_status->serv_sock, msg, msg->len, 0);
+			free(msg);
+			global_vsecplat_status->status = VSECPLAT_RUNNING;
 			thread_add_read(master, vsecplat_deal_policy, NULL, global_vsecplat_status->serv_sock);	
-			break;
+			timeout = 20;  // report every one minute
 
+			break;
+		case VSECPLAT_RUNNING:
+			// report count
+			str = persist_record();
+			if(NULL==str){
+				//TODO
+				break;
+			}
+			len = strlen(str) + sizeof(struct msg_head);
+			msg = (struct msg_head *)malloc(len);
+			if(NULL==msg){
+				//TODO
+			}
+			memset(msg, 0, len);
+			msg->len = len;
+			msg->msg_type = NM_REPORT_COUNT;
+			strcpy(msg->data, str);
+			printf("will report count, msg len=%d.\n", msg->len);
+			send(global_vsecplat_status->serv_sock, msg, msg->len, 0);
+
+			break;
 		default:
 			break;
 	}
 
 out:
-	thread_add_timer(master, vsecplat_timer_func, NULL, 5);	
+	thread_add_timer(master, vsecplat_timer_func, NULL, timeout);
 	return 0;
 }
 

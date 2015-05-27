@@ -223,6 +223,7 @@ char *persist_record(void)
 
 	str = rte_serialize_json(root);
 
+	printf("persist_record=%s\n", str);
 err_out:
 	rte_destroy_json(root);
 	return str;

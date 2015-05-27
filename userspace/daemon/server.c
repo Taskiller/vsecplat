@@ -12,6 +12,7 @@
 #include <string.h>
 
 #include "thread.h"
+#include "msg_comm.h"
 
 static struct thread_master *master=NULL;
 
@@ -58,30 +59,35 @@ int send_policy(int sock)
 	int fd=0;
 	struct stat stat_buf;
 	int len;
-	char *file_buf=NULL;
-
-	printf("In send_policy\n");
+	struct msg_head *msg=NULL;
 
 	memset(&stat_buf, 0, sizeof(struct stat));
 	stat("./add_rule.json", &stat_buf);
 	len = stat_buf.st_size;
 	
-	file_buf = malloc(len);
-	if(NULL==file_buf){
+	msg = malloc(2048);
+	if(NULL==msg){
 		return -1;
 	}
-	memset(file_buf, 0, len);
+	memset(msg, 0, 2048);
 	fd = open("./add_rule.json", O_RDONLY);
 	if(fd<0){
-		free(file_buf);
+		free(msg);
 		return -1;
 	}
-	read(fd, file_buf, len);
+	read(fd, msg->data, len);
 	close(fd);
 	
-	write(sock, file_buf, len);
-	free(file_buf);
-	printf("end send_policy\n");
+	msg->len = len + sizeof(struct msg_head);
+	write(sock, msg, len);
+	free(msg);
+	printf("In send_policy, policy=%s\n", msg->data);
+	return 0;
+}
+
+int parse_report(struct msg_head *msg)
+{
+	printf("report=%s\n", msg->data);
 	return 0;
 }
 
@@ -90,6 +96,7 @@ int msg_deal(struct thread *thread)
 	int sock = THREAD_FD(thread);
 	char *readbuf=NULL;
 	int readlen;
+	struct msg_head *msg=NULL;
 
 	printf("In msg_deal\n");	
 	readbuf = malloc(4096);
@@ -100,13 +107,24 @@ int msg_deal(struct thread *thread)
 		// 
 		return 0;
 	}
-	printf("get msg: %s\n", readbuf);
-	// if send complete
-	if(!strcmp(readbuf, "get policy")){
-		send_policy(sock);
-	}else{
-		free(readbuf);
+	msg = (struct msg_head *)readbuf;
+
+	printf("readlen %d, get msg len %d, msg_type %d\n", readlen, msg->len, msg->msg_type);
+	if(msg->len!=readlen){
+		//TODO	
 	}
+	// if send complete
+	switch(msg->msg_type){
+		case NM_GET_RULES:
+			send_policy(sock);
+			break;
+		case NM_REPORT_COUNT:
+			parse_report(msg);
+			break;
+		default:
+			break;
+	}
+	free(readbuf);
 
 	thread_add_read(thread->master, msg_deal, NULL, sock);
 	return 0;
