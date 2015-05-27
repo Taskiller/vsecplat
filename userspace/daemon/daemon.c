@@ -21,12 +21,11 @@
 struct thread_master *master=NULL;
 int main(void)
 {
-	// test_policy_parse();
 	int ret=0;
-#if 0
 	int sock=0;
 	struct thread thread;
-#endif
+
+#if 0
 
 	// parse configfile and init global descriptor: global_vsecplat_config
 	ret = parse_vsecplat_config();	
@@ -63,6 +62,7 @@ int main(void)
 		return -1;
 	}
 
+#endif
 	// init app status desc: global_vsecplat_status
 	ret = init_vsecplat_status();
 	if(ret<0){
@@ -77,7 +77,8 @@ int main(void)
 		return -1;
 	}
 
-#if 0
+	vsecplat_test_record();
+
 //	ret = fork();
 
 //	if(ret>0)
@@ -94,12 +95,12 @@ int main(void)
 		while(thread_fetch(master, &thread)){
 			thread_call(&thread);
 		}
-	} else
-#endif
-	{
+	}
+#if 0
+	else {
 		// In child process, will deal with the packet
 		packet_handle_loop();
 	}
-
+#endif
 	return 0;
 }

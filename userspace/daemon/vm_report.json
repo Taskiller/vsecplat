@@ -1,5 +1,4 @@
 {
-"report_time":"2015-12-26 18:20:30",
 "record_list":[
 	{"sip":"10.0.0.1", "dip":"10.0.0.2", "sport":1, "dport":2, "proto":0, "vlan":0, "count":1234},
 	{"sip":"10.0.0.1", "dip":"10.0.0.2", "sport":1, "dport":3, "proto":1, "vlan":0, "count":2123},

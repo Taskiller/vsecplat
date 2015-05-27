@@ -14,17 +14,17 @@ struct record_entry{
 	u32 proto;
 	u16 vlanid;
 	u64 count;
-	u64 timestamp;
 };
 
 struct record_bucket{
 	struct list_head list;
-	u32 count;
+	// u32 count;
 	struct nm_mutex mutex;
 };
 
 int vsecplat_init_record_bucket(void);
 int vsecplat_record_pkt(struct nm_skb *skb);
+int vsecplat_test_record(void);
 
 #define LIST_FIND(head, cmpfn, type, args...) 	\
 		({ 										\
