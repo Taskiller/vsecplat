@@ -6,51 +6,21 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#include "vsecplat_status.h"
 #include "vsecplat_config.h"
 #include "vsecplat_record.h"
 #include "msg_comm.h"
 
-int init_sock(char *ipaddr, int port)
-{
-	int sock;
-	struct sockaddr_in addr;
-	struct in_addr in;
-	int ret;
-
-	sock = socket(AF_INET, SOCK_STREAM, 0);
-	if(sock<0){
-		return -1;
-	}
-
-	memset(&addr, 0, sizeof(struct sockaddr_in));
-	addr.sin_family = AF_INET;
-	inet_aton(ipaddr, &in);
-	addr.sin_addr.s_addr = in.s_addr;
-	addr.sin_port = htons(port);
-	
-	ret = connect(sock, (struct sockaddr *)&addr, sizeof(addr));
-	if(ret<0){
-		close(sock);
-		return -1;
-	}else if(ret==0){
-
-	}
-
-	return sock;
-}
-
 static struct conn_desc *conn_desc=NULL;
-struct conn_desc *init_conn_desc(void)
+int init_conn_desc(void)
 {
-	struct conn_desc *desc = NULL;	
-	desc = (struct conn_desc *)malloc(sizeof(struct conn_desc));
-	if(NULL==desc){
-		return NULL;
+	conn_desc = (struct conn_desc *)malloc(sizeof(struct conn_desc));
+	if(NULL==conn_desc){
+		return -1;
 	}
-	memset(desc, 0, sizeof(struct conn_desc));
+	memset(conn_desc, 0, sizeof(struct conn_desc));
+	conn_desc->status = VSECPLAT_CONNECTING_SERV;
 
-	return desc;
+	return 0;
 }
 
 extern struct thread_master *master;
@@ -87,7 +57,7 @@ int vsecplat_deal_policy(struct thread *thread)
 			break;
 	}
 
-	thread_add_read(master, vsecplat_deal_policy, NULL, global_vsecplat_status->serv_sock);	
+	thread_add_read(master, vsecplat_deal_policy, NULL, conn_desc->sock);	
 	free(readbuf);
 	return 0;
 }
@@ -103,7 +73,7 @@ int vsecplat_timer_func(struct thread *thread)
 	int len=0;
 	printf("In vsecplat_timer_func\n");
 
-	switch(global_vsecplat_status->status){
+	switch(conn_desc->status){
 		case VSECPLAT_CONNECTING_SERV:
 			sock = socket(AF_INET, SOCK_STREAM, 0);
 			if(sock<0){
@@ -120,8 +90,8 @@ int vsecplat_timer_func(struct thread *thread)
 				printf("failed to connect server\n");
 				goto out;
 			}
-			global_vsecplat_status->status = VSECPLAT_CONNECT_OK;
-			global_vsecplat_status->serv_sock = sock;
+			conn_desc->status = VSECPLAT_CONNECT_OK;
+			conn_desc->sock = sock;
 
 			break;
 		case VSECPLAT_CONNECT_OK:
@@ -133,10 +103,10 @@ int vsecplat_timer_func(struct thread *thread)
 			msg->len = sizeof(struct msg_head);
 			msg->msg_type = NM_GET_RULES;
 			printf("send msg len %d, type %d.\n", msg->len, msg->msg_type);
-			send(global_vsecplat_status->serv_sock, msg, msg->len, 0);
+			send(conn_desc->sock, msg, msg->len, 0);
 			free(msg);
-			global_vsecplat_status->status = VSECPLAT_RUNNING;
-			thread_add_read(master, vsecplat_deal_policy, NULL, global_vsecplat_status->serv_sock);	
+			conn_desc->status = VSECPLAT_RUNNING;
+			thread_add_read(master, vsecplat_deal_policy, NULL, conn_desc->sock);	
 			timeout = 20;  // report every one minute
 
 			break;
@@ -157,7 +127,7 @@ int vsecplat_timer_func(struct thread *thread)
 			msg->msg_type = NM_REPORT_COUNT;
 			strcpy(msg->data, str);
 			printf("will report count, msg len=%d.\n", msg->len);
-			send(global_vsecplat_status->serv_sock, msg, msg->len, 0);
+			send(conn_desc->sock, msg, msg->len, 0);
 
 			break;
 		default:

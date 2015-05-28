@@ -14,7 +14,6 @@
 #include "packet.h"
 #include "vsecplat_config.h"
 #include "vsecplat_interface.h"
-#include "vsecplat_status.h"
 #include "vsecplat_policy.h"
 #include "vsecplat_record.h"
 
@@ -62,8 +61,8 @@ int main(void)
 	}
 
 #endif
-	// init app status desc: global_vsecplat_status
-	ret = init_vsecplat_status();
+
+	ret = init_conn_desc();
 	if(ret<0){
 		printf("Failed to init vsecplat status.\n");
 		return -1;

@@ -3,7 +3,16 @@
 
 #include "thread.h"
 
+enum{
+	VSECPLAT_CONNECTING_SERV,
+	VSECPLAT_CONNECT_OK,
+	VSECPLAT_RUNNING,
+	VSECPLAT_STATUS_MAX
+};
+
+
 struct conn_desc{
+	int status;	
 	int sock;
 	char *recv_buf;
 	char *send_buf;
@@ -24,7 +33,7 @@ struct msg_head{
 	char data[0];
 };
 
-int init_sock(char *ipaddr, int port);
+int init_conn_desc(void);
 int vsecplat_timer_func(struct thread *thread);
 
 #endif
