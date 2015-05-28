@@ -1,4 +1,4 @@
-PROGS=bridge
+PROGS=nm_bridge
 
 CLEANFILES = $(PROGS) *.o
 
@@ -10,7 +10,7 @@ LIBS = -lnetmap
 all: $(PROGS)
 	cp -f $(PROGS) $(root_dir)/rootfs/usr/bin/
 
-bridge: bridge.o
+nm_bridge: bridge.o
 	$(CC) $(LIBS) $(LIBS_INCLUDE) -o $@ $^
 
 %.o: %.c

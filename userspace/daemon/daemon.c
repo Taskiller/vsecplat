@@ -39,7 +39,7 @@ int main(void)
 		printf("Failed to init policy descriptor.\n");
 		return -1;
 	}
-#if 0
+#if 1
 	// init global interface list: vsecplat_interface_list
 	ret = init_vsecplat_interface_list();
 	if(ret<0){
@@ -62,6 +62,7 @@ int main(void)
 	}
 #endif
 
+	// init connection descriptor: conn_desc
 	ret = init_conn_desc();
 	if(ret<0){
 		printf("Failed to init vsecplat status.\n");
@@ -75,7 +76,8 @@ int main(void)
 		return -1;
 	}
 
-	vsecplat_test_record();
+	// vsecplat_test_record();
+	packet_handle_thread(NULL);
 
 #if 0
 	ret = pthread_create(&thread_id, NULL, &packet_handle_thread, NULL);
@@ -83,8 +85,6 @@ int main(void)
 		// TODO
 		return -1;
 	}
-#endif
-
 	// manage thread 
 	master = thread_master_create();
 	if(NULL==master){
@@ -98,6 +98,6 @@ int main(void)
 	while(thread_fetch(master, &thread)){
 		thread_call(&thread);
 	}
-
+#endif
 	return 0;
 }

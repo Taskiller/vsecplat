@@ -553,7 +553,7 @@ struct nm_ifreq {
 };
 
 #define NM_BUF_SIZE 2048
-#define NM_HEAD_OFFSET 128
+#define NM_HEAD_OFFSET 256
 #define NM_END_RESERVED 32 // For skb push
 /*
 |<----------       NM_BUF_SIZE       --------->|

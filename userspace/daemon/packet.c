@@ -83,7 +83,7 @@ static int packet_intercept(struct nm_skb *skb)
 	}
 
 	vsecplat_record_pkt(skb);
-	return ret;
+	return NM_PKT_FORWARD;
 }
 
 static int packet_send(struct nm_skb *skb)

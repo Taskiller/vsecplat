@@ -161,6 +161,7 @@ int setup_dp_interfaces(void)
 		}
 		dev = nm_open_dev(ifp->name);
 		if(NULL==dev){
+			// TODO
 			return -1;
 		}
 		nm_registe_dev(dev);
@@ -170,10 +171,12 @@ int setup_dp_interfaces(void)
 	for(idx=0;idx<outport_num;idx++){
 		ifp = vsecplat_get_interface_by_name(global_vsecplat_config->outport_desc_array[idx].name);
 		if(NULL==ifp){
+			// TODO
 			return -1;
 		}
 		dev = nm_open_dev(ifp->name);
 		if(NULL==dev){
+			// TODO
 			return -1;
 		}
 		nm_registe_dev(dev);
