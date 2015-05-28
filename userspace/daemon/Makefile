@@ -18,7 +18,7 @@ CC = gcc
 NM = nm
 INCLUDES= -I../include/ -I$(root_dir)/include/
 LIBS_INCLUDE = -L$(root_dir)/userspace/lib/
-LIBS = -ldl -lcrypt -lm -lnetmap
+LIBS = -ldl -lcrypt -lm -lnetmap -lpthread
 COMPILE = $(CC) $(CFLAGS) $(INCLUDES)
 LINK = $(COMPILE) -o $@
 

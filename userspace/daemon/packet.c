@@ -1,3 +1,4 @@
+#include <unistd.h>
 #include "packet.h"
 #include "nm_vlan.h"
 #include "nm_ether.h"
@@ -92,12 +93,17 @@ static int packet_send(struct nm_skb *skb)
 	return 0;
 }
 
-int packet_handle_loop(void)
+void *packet_handle_thread(void *unused)
 {
 	int ret=0;
 	struct nm_skb *skb=NULL;
 
 	do{
+	#if 0
+		printf("In packet_handle_thread.\n");
+		sleep(3);
+	#endif
+
 		skb = nm_recv();
 		if(NULL==skb){
 			continue;
@@ -109,5 +115,5 @@ int packet_handle_loop(void)
 		}
 	}while(1);
 
-	return 0;
+	return unused;
 }

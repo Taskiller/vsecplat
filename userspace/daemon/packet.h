@@ -3,6 +3,6 @@
 
 #include "nm_skb.h"
 
-int packet_handle_loop(void);
+void *packet_handle_thread(void *unused);
 
 #endif

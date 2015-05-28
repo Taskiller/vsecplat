@@ -24,6 +24,8 @@ int main(void)
 	int sock=0;
 	struct thread thread;
 
+	pthread_t thread_id;
+
 	// parse configfile and init global descriptor: global_vsecplat_config
 	ret = parse_vsecplat_config();	
 	if(ret<0){
@@ -37,7 +39,6 @@ int main(void)
 		printf("Failed to init policy descriptor.\n");
 		return -1;
 	}
-
 #if 0
 	// init global interface list: vsecplat_interface_list
 	ret = init_vsecplat_interface_list();
@@ -59,7 +60,6 @@ int main(void)
 		printf("Failed to setup dataplane interface.\n");
 		return -1;
 	}
-
 #endif
 
 	ret = init_conn_desc();
@@ -77,28 +77,27 @@ int main(void)
 
 	vsecplat_test_record();
 
-//	ret = fork();
-
-//	if(ret>0)
-	{ // parent
-		master = thread_master_create();
-		if(NULL==master){
-			//TODO
-			return -1;
-		}
-
-		thread_add_timer(master, vsecplat_timer_func, NULL, 5);	
-		memset(&thread, 0, sizeof(struct thread));
-
-		while(thread_fetch(master, &thread)){
-			thread_call(&thread);
-		}
-	}
 #if 0
-	else {
-		// In child process, will deal with the packet
-		packet_handle_loop();
+	ret = pthread_create(&thread_id, NULL, &packet_handle_thread, NULL);
+	if(ret<0){
+		// TODO
+		return -1;
 	}
 #endif
+
+	// manage thread 
+	master = thread_master_create();
+	if(NULL==master){
+		//TODO
+		return -1;
+	}
+
+	thread_add_timer(master, vsecplat_timer_func, NULL, 5);	
+	memset(&thread, 0, sizeof(struct thread));
+
+	while(thread_fetch(master, &thread)){
+		thread_call(&thread);
+	}
+
 	return 0;
 }
