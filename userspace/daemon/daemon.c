@@ -21,7 +21,6 @@ struct thread_master *master=NULL;
 int main(void)
 {
 	int ret=0;
-	int sock=0;
 	struct thread thread;
 
 	pthread_t thread_id;
@@ -39,7 +38,8 @@ int main(void)
 		printf("Failed to init policy descriptor.\n");
 		return -1;
 	}
-#if 1
+
+#if 0
 	// init global interface list: vsecplat_interface_list
 	ret = init_vsecplat_interface_list();
 	if(ret<0){
@@ -76,15 +76,17 @@ int main(void)
 		return -1;
 	}
 
-	// vsecplat_test_record();
-	packet_handle_thread(NULL);
-
+	vsecplat_test_record();
 #if 0
+	packet_handle_thread(NULL);
 	ret = pthread_create(&thread_id, NULL, &packet_handle_thread, NULL);
 	if(ret<0){
 		// TODO
 		return -1;
 	}
+#endif
+
+#if 1
 	// manage thread 
 	master = thread_master_create();
 	if(NULL==master){

@@ -38,7 +38,7 @@ int create_sock(void)
 	ret = bind(sock, (struct sockaddr *)&serv, sizeof(struct sockaddr_in));
 	if(ret<0){
 		//TODO
-		printf("Failed to bind, err=%d\n", errno);
+		perror("Failed to bind: ");
 		close(sock);
 		return -1;
 	}
@@ -46,7 +46,7 @@ int create_sock(void)
 	ret = listen(sock, 5);
 	if(ret<0){
 		//TODO
-		printf("Failed to listen\n");
+		perror("Failed to listen: ");
 		close(sock);
 		return -1;
 	}
@@ -56,6 +56,7 @@ int create_sock(void)
 
 int send_policy(int sock)
 {
+	int ret=0;
 	int fd=0;
 	struct stat stat_buf;
 	int len;
@@ -79,7 +80,10 @@ int send_policy(int sock)
 	close(fd);
 	
 	msg->len = len + sizeof(struct msg_head);
-	write(sock, msg, len);
+	ret = write(sock, msg, len);
+	if(ret<0){
+		perror("socket write error: ");	
+	}
 	free(msg);
 	printf("In send_policy, policy=%s\n", msg->data);
 	return 0;
@@ -145,6 +149,7 @@ int msg_sock_listen(struct thread *thread)
 
 	if(accept_sock<0){
 		//TODO
+		perror("accept error: ");
 		goto listen_end;
 	}
 	thread_add_read(thread->master, msg_deal, NULL, accept_sock);

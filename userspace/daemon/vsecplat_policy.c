@@ -467,6 +467,7 @@ int init_policy_list(void)
 	return 0;
 }
 
+#if 0
 int test_policy_parse(void)
 {
 	int fd=0;
@@ -494,3 +495,4 @@ int test_policy_parse(void)
 	vsecplat_parse_policy(file_buf);
 	return 0;
 }
+#endif

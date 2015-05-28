@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -39,6 +40,8 @@ int vsecplat_deal_policy(struct thread *thread)
 	memset(readbuf, 0, 2048);
 	readlen = read(serv_sock, readbuf, 2048);
 	if(readlen<=0){
+		//TODO
+		perror("socket read error:");
 		return -1;
 	}
 	msg = (struct msg_head *)readbuf;
@@ -103,7 +106,11 @@ int vsecplat_timer_func(struct thread *thread)
 			msg->len = sizeof(struct msg_head);
 			msg->msg_type = NM_GET_RULES;
 			printf("send msg len %d, type %d.\n", msg->len, msg->msg_type);
-			send(conn_desc->sock, msg, msg->len, 0);
+			ret = write(conn_desc->sock, msg, msg->len);
+			if(ret<0){
+				//TODO
+				perror("socket write error: ");
+			}
 			free(msg);
 			conn_desc->status = VSECPLAT_RUNNING;
 			thread_add_read(master, vsecplat_deal_policy, NULL, conn_desc->sock);	
@@ -127,8 +134,11 @@ int vsecplat_timer_func(struct thread *thread)
 			msg->msg_type = NM_REPORT_COUNT;
 			strcpy(msg->data, str);
 			printf("will report count, msg len=%d.\n", msg->len);
-			send(conn_desc->sock, msg, msg->len, 0);
-
+			ret = write(conn_desc->sock, msg, msg->len);
+			if(ret<0){
+				//TODO
+				perror("socket write error :");
+			}
 			break;
 		default:
 			break;

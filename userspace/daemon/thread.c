@@ -9,6 +9,7 @@
 #include <string.h>
 #include "thread.h"
 
+#if 0
 #define TIMER_SECOND_MICRO 1000000L
 static struct timeval timeval_adjust(struct timeval a)
 {
@@ -40,6 +41,7 @@ static struct timeval timeval_subtract(struct timeval a, struct timeval b)
 
 	return timeval_adjust(ret);
 }
+#endif
 
 static int timeval_cmp(struct timeval a, struct timeval b)
 {

@@ -63,5 +63,5 @@ int init_policy_list(void);
 int vsecplat_parse_policy(const char *buf);
 int get_forward_policy(struct nm_skb *skb);
 
-int test_policy_parse(void);
+// int test_policy_parse(void);
 #endif
