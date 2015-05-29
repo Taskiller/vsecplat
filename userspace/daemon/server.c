@@ -80,12 +80,12 @@ int send_policy(int sock)
 	close(fd);
 	
 	msg->len = len + sizeof(struct msg_head);
-	ret = write(sock, msg, len);
+	ret = write(sock, msg, msg->len);
 	if(ret<0){
 		perror("socket write error: ");	
 	}
 	free(msg);
-	printf("In send_policy, policy=%s\n", msg->data);
+	printf("In send_policy, msg len=%d, writelen=%d, policy=%s\n", msg->len, ret, msg->data);
 	return 0;
 }
 
