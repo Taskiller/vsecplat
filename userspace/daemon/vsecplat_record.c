@@ -214,7 +214,7 @@ char *persist_record(void)
 				}
 				rte_array_add_item(array, item);
 				// clear the count
-				entry->count = 0;
+				// entry->count = 0;
 			}
 		}
 		nm_mutex_unlock(&bucket->mutex);

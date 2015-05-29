@@ -4,20 +4,23 @@
 #include "thread.h"
 
 enum{
-	VSECPLAT_CONNECTING_SERV,
+	VSECPLAT_CONNECTING_SERV=0,
 	VSECPLAT_CONNECT_OK,
 	VSECPLAT_RUNNING,
 	VSECPLAT_STATUS_MAX
 };
 
-
 struct conn_desc{
 	int status;	
 	int sock;
-	char *recv_buf;
-	char *send_buf;
+	
 	int recv_len;
 	int send_len;
+	int recv_ofs;
+	int send_ofs;
+	
+	char *recv_buf;
+	char *send_buf;
 };
 
 enum{

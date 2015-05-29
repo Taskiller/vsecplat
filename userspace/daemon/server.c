@@ -103,12 +103,13 @@ int msg_deal(struct thread *thread)
 	struct msg_head *msg=NULL;
 
 	printf("In msg_deal\n");	
+
 	readbuf = malloc(4096);
 	memset(readbuf, 0, 4096);
 
 	readlen = read(sock, (void *)readbuf, 4096);
 	if(readlen<=0){
-		// 
+		perror("read error:");
 		return 0;
 	}
 	msg = (struct msg_head *)readbuf;
@@ -120,7 +121,7 @@ int msg_deal(struct thread *thread)
 	// if send complete
 	switch(msg->msg_type){
 		case NM_GET_RULES:
-			send_policy(sock);
+			// send_policy(sock);
 			break;
 		case NM_REPORT_COUNT:
 			parse_report(msg);
@@ -130,6 +131,7 @@ int msg_deal(struct thread *thread)
 	}
 	free(readbuf);
 
+	send_policy(sock);
 	thread_add_read(thread->master, msg_deal, NULL, sock);
 	return 0;
 }
@@ -152,6 +154,9 @@ int msg_sock_listen(struct thread *thread)
 		perror("accept error: ");
 		goto listen_end;
 	}
+
+	send_policy(accept_sock);
+
 	thread_add_read(thread->master, msg_deal, NULL, accept_sock);
 
 listen_end:

@@ -232,7 +232,6 @@ void thread_add_unuse(struct thread_master *m, struct thread *thread)
 	thread_list_add(&m->unuse, thread);
 }
 
-
 void thread_cancel(struct thread *thread)
 {
 	if(NULL==thread){
