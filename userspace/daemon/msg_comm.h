@@ -11,8 +11,9 @@ enum{
 };
 
 struct conn_desc{
-	int status;	
 	int sock;
+	int timeout;
+	int status;	
 	
 	int recv_len;
 	int send_len;
@@ -24,8 +25,7 @@ struct conn_desc{
 };
 
 enum{
-	NM_GET_RULES=1, /* vm get the policy rules */
-	NM_ADD_RULES,   /* manage center add the policy rules */
+	NM_ADD_RULES=1,   /* manage center add the policy rules */
 	NM_DEL_RULES,	/* manage center del the policy rules */
 	NM_REPORT_COUNT,		/* vm report the packet records */
 };

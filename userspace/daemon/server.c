@@ -3,7 +3,6 @@
 #include <unistd.h>
 #include <errno.h>
 #include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <string.h>
@@ -58,14 +57,9 @@ int send_policy(int sock)
 {
 	int ret=0;
 	int fd=0;
-	struct stat stat_buf;
 	int len;
 	struct msg_head *msg=NULL;
 
-	memset(&stat_buf, 0, sizeof(struct stat));
-	stat("./add_rule.json", &stat_buf);
-	len = stat_buf.st_size;
-	
 	msg = malloc(2048);
 	if(NULL==msg){
 		return -1;
@@ -76,14 +70,17 @@ int send_policy(int sock)
 		free(msg);
 		return -1;
 	}
-	read(fd, msg->data, len);
+	len = read(fd, msg->data, 2048);
 	close(fd);
 	
 	msg->len = len + sizeof(struct msg_head);
+	msg->msg_type = NM_ADD_RULES;
+
 	ret = write(sock, msg, msg->len);
 	if(ret<0){
 		perror("socket write error: ");	
 	}
+	
 	free(msg);
 	printf("In send_policy, msg len=%d, writelen=%d, policy=%s\n", msg->len, ret, msg->data);
 	return 0;
@@ -91,48 +88,65 @@ int send_policy(int sock)
 
 int parse_report(struct msg_head *msg)
 {
-	printf("report=%s\n", msg->data);
+	printf("report json=%s\n", msg->data);
 	return 0;
 }
+
+static char readbuf[4096];
+static int readlen=0;
+static int readofs=0;
+static int send_sock=0;
 
 int msg_deal(struct thread *thread)
 {
 	int sock = THREAD_FD(thread);
-	char *readbuf=NULL;
-	int readlen;
+	int len=0;
 	struct msg_head *msg=NULL;
 
-	printf("In msg_deal\n");	
+	printf("In msg_deal, readofs=%d\n", readofs);
 
-	readbuf = malloc(4096);
-	memset(readbuf, 0, 4096);
-
-	readlen = read(sock, (void *)readbuf, 4096);
-	if(readlen<=0){
+	len = read(sock, (void *)(readbuf+readofs), 4096);
+	if(len<=0){
 		perror("read error:");
 		return 0;
 	}
-	msg = (struct msg_head *)readbuf;
 
-	printf("readlen %d, get msg len %d, msg_type %d\n", readlen, msg->len, msg->msg_type);
-	if(msg->len!=readlen){
-		//TODO	
+	readofs += len;
+	msg = (struct msg_head *)readbuf;
+	readlen = msg->len;
+
+	printf("readofs=%d, readlen=%d\n", readofs, readlen);
+
+	if(readofs<readlen){
+		thread_add_read(thread->master, msg_deal, NULL, sock);
 	}
+
+	printf("readofs %d, get msg len %d, msg_type %d\n", readofs, msg->len, msg->msg_type);
+
 	// if send complete
 	switch(msg->msg_type){
-		case NM_GET_RULES:
-			// send_policy(sock);
-			break;
 		case NM_REPORT_COUNT:
 			parse_report(msg);
 			break;
 		default:
 			break;
 	}
-	free(readbuf);
+	
+	memset(readbuf, 0, 4096);
+	readlen = 0;
+	readofs = 0;
 
-	send_policy(sock);
 	thread_add_read(thread->master, msg_deal, NULL, sock);
+	return 0;
+}
+
+int send_msg(struct thread *thread)
+
+{
+	send_policy(send_sock);
+
+	thread_add_timer(thread->master, send_msg, NULL, 5);
+
 	return 0;
 }
 
@@ -155,7 +169,9 @@ int msg_sock_listen(struct thread *thread)
 		goto listen_end;
 	}
 
-	send_policy(accept_sock);
+	send_sock = accept_sock;
+
+	thread_add_timer(thread->master, send_msg, NULL, 5);
 
 	thread_add_read(thread->master, msg_deal, NULL, accept_sock);
 
@@ -174,6 +190,10 @@ int main(void)
 		//TODO
 		return -1;
 	}
+
+	memset(readbuf, 0, 4096);
+	readofs = 0;
+	readlen = 0;
 
 	sock = create_sock();	
 	if(sock<0){

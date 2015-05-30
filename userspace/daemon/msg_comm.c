@@ -8,6 +8,7 @@
 #include <arpa/inet.h>
 
 #include "vsecplat_config.h"
+#include "vsecplat_policy.h"
 #include "vsecplat_record.h"
 #include "msg_comm.h"
 
@@ -22,8 +23,12 @@ int init_conn_desc(void)
 	memset(conn_desc, 0, sizeof(struct conn_desc));
 
 	conn_desc->recv_buf = (char *)malloc(NM_RECV_BUF_LEN);
+	if(NULL==conn_desc->recv_buf){
+		//TODO
+	}
 	memset(conn_desc->recv_buf, 0, NM_RECV_BUF_LEN*sizeof(char));
 	conn_desc->status = VSECPLAT_CONNECTING_SERV;
+	conn_desc->timeout = 5;
 
 	return 0;
 }
@@ -50,6 +55,7 @@ void clean_conn_desc(void)
 	memset(conn_desc, 0, sizeof(struct conn_desc));
 	conn_desc->recv_buf = recv_buf;
 	conn_desc->status = VSECPLAT_CONNECTING_SERV;
+	conn_desc->timeout = 5;
 
 	return;
 }
@@ -60,42 +66,41 @@ int vsecplat_report_stats(struct thread *thread)
 {
 	char *str;
 	int len, w_len;
-	struct msg_head msg;
+	struct msg_head *msg=NULL;
 
-#if 1
 	printf("In vsecplat_report_stats.\n");
 
 	if(conn_desc->send_ofs==0){
-		memset((void *)&msg, 0, sizeof(struct msg_head));
-
 		str = persist_record();
 		if(NULL==str){
 			//TODO
 		}
 		len = strlen(str);
-		conn_desc->send_len = len; 
-		conn_desc->send_buf = str;
-		msg.len = len + sizeof(struct msg_head);
-		msg.msg_type = NM_REPORT_COUNT;
-
-		printf("will report count, msg len=%d.\n", msg.len);
-		w_len = write(conn_desc->sock, (void *)&msg, sizeof(struct msg_head));
-		if(w_len<0){
+		conn_desc->send_len = len + sizeof(struct msg_head); 
+		msg = (struct msg_head *)malloc(conn_desc->send_len);
+		if(NULL==msg){
 			//TODO
-			perror("socket write error :");
 		}
-
-		w_len = write(conn_desc->sock, (void *)conn_desc->send_buf, 2048);
+		memset((void *)msg, 0, conn_desc->send_len);
+		memcpy(msg->data, str, len);
+		free(str);  // clean the persist buffer
+		conn_desc->send_buf = (char *)msg;
+		msg->len = conn_desc->send_len;
+		msg->msg_type = NM_REPORT_COUNT;
+	
+		w_len = write(conn_desc->sock, (void *)conn_desc->send_buf, conn_desc->send_len);
 		if(w_len<0){
 			//TODO
 			perror("socket write error:");
+			goto out;
 		}
-		conn_desc->send_ofs += w_len;	
+		conn_desc->send_ofs += w_len;
 	}else{
-		w_len = write(conn_desc->sock, (void *)(conn_desc->send_buf+conn_desc->send_ofs), 2048);
+		w_len = write(conn_desc->sock, (void *)(conn_desc->send_buf+conn_desc->send_ofs), conn_desc->send_len - conn_desc->send_ofs);
 		if(w_len<0){
 			//TODO
 			perror("socket write error:");
+			goto out;
 		}
 		conn_desc->send_ofs += w_len;
 	}
@@ -109,9 +114,13 @@ int vsecplat_report_stats(struct thread *thread)
 	conn_desc->send_ofs = 0;
 	conn_desc->send_len = 0;
 	conn_desc->send_buf = NULL;
-#endif
 
-	thread_add_timer(master, vsecplat_timer_func, NULL, VSECPLAT_REPORT_INTERVAL);
+	thread_add_timer(master, vsecplat_timer_func, NULL, conn_desc->timeout);
+	return 0;
+
+out:
+	clean_conn_desc();
+	thread_add_timer(master, vsecplat_timer_func, NULL, conn_desc->timeout);
 	return 0;
 }
 
@@ -119,12 +128,11 @@ int vsecplat_deal_policy(struct thread *thread)
 {
 	int serv_sock = THREAD_FD(thread);
 	int readlen=0;	
-	char *recv_buf = conn_desc->recv_buf;
 	struct msg_head *msg=NULL;
 
 	printf("In vsecplat_deal_policy.\n");
 
-	readlen = read(serv_sock, recv_buf+conn_desc->recv_ofs, 2048); 
+	readlen = read(serv_sock, conn_desc->recv_buf+conn_desc->recv_ofs, 2048); 
 	if(readlen<=0){ // sock is close or error
 		clean_conn_desc();
 		return -1;
@@ -143,15 +151,14 @@ int vsecplat_deal_policy(struct thread *thread)
 
 	switch(msg->msg_type){
 		case NM_ADD_RULES:
-
-			break;
 		case NM_DEL_RULES:
+			vsecplat_parse_policy(msg->data);		
 			break;
 		default:
 			break;
 	}
 
-	memset(conn_desc->recv_buf, 0, NM_RECV_BUF_LEN * sizeof(char));
+	memset(conn_desc->recv_buf, 0, conn_desc->recv_len);
 	conn_desc->recv_len = 0;
 	conn_desc->recv_ofs = 0;
 
@@ -164,7 +171,6 @@ int vsecplat_timer_func(struct thread *thread)
 {
 	int sock;
 	int ret;
-	int timeout=5;
 	struct sockaddr_in serv;
 
 	printf("In vsecplat_timer_func\n");
@@ -194,7 +200,7 @@ int vsecplat_timer_func(struct thread *thread)
 		case VSECPLAT_CONNECT_OK:
 			conn_desc->status = VSECPLAT_RUNNING;
 			thread_add_read(master, vsecplat_deal_policy, NULL, conn_desc->sock);	
-			timeout = VSECPLAT_REPORT_INTERVAL;
+			conn_desc->timeout = VSECPLAT_REPORT_INTERVAL;
 			break;
 
 		case VSECPLAT_RUNNING:
@@ -205,7 +211,7 @@ int vsecplat_timer_func(struct thread *thread)
 			break;
 	}
 out:
-	thread_add_timer(master, vsecplat_timer_func, NULL, timeout);
+	thread_add_timer(master, vsecplat_timer_func, NULL, conn_desc->timeout);
 	return 0;
 }
 

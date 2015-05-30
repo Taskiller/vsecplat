@@ -2,6 +2,7 @@
 #include "rte_json.h"
 #include "nm_type.h"
 #include "nm_skb.h"
+#include "msg_comm.h"
 #include  "vsecplat_policy.h"
 
 static inline int bad_ip_address(char *str)
@@ -344,10 +345,10 @@ int vsecplat_parse_policy(const char *buf)
 		return -1;
 	}
 	switch(action){
-		case ADD_RULE:
+		case NM_ADD_RULES:
 			ret = vsecplat_add_policy(forward_rules);		
 			break;
-		case DEL_RULE:
+		case NM_DEL_RULES:
 			ret = vsecplat_del_policy(forward_rules);		
 			break;
 		default:
