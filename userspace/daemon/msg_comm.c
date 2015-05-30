@@ -74,12 +74,15 @@ int vsecplat_report_stats(struct thread *thread)
 		str = persist_record();
 		if(NULL==str){
 			//TODO
+			goto no_count_report;
 		}
 		len = strlen(str);
 		conn_desc->send_len = len + sizeof(struct msg_head); 
 		msg = (struct msg_head *)malloc(conn_desc->send_len);
 		if(NULL==msg){
 			//TODO
+			free(str);
+			goto no_count_report;
 		}
 		memset((void *)msg, 0, conn_desc->send_len);
 		memcpy(msg->data, str, len);
@@ -115,6 +118,7 @@ int vsecplat_report_stats(struct thread *thread)
 	conn_desc->send_len = 0;
 	conn_desc->send_buf = NULL;
 
+no_count_report:
 	thread_add_timer(master, vsecplat_timer_func, NULL, conn_desc->timeout);
 	return 0;
 

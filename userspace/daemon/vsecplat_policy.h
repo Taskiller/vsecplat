@@ -1,6 +1,7 @@
 #ifndef __VSECPLAT_VM_H__
 #define __VSECPLAT_VM_H__
 #include "nm_list.h"
+#include "nm_skb.h"
 #include "nm_mutex.h"
 
 /*

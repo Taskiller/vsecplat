@@ -193,7 +193,7 @@ char *persist_record(void)
 
 	array = new_json_item();
 	if(NULL==array){
-		goto err_out;
+		goto out;
 	}
 	array->type = JSON_ARRAY;
 
@@ -210,21 +210,24 @@ char *persist_record(void)
 				item = record_entry_to_json(entry);
 				if(NULL==item){
 					//TODO
-					goto err_out;
+					goto out;
 				}
 				rte_array_add_item(array, item);
 				// clear the count
-				// entry->count = 0;
+				entry->count = 0;
 			}
 		}
 		nm_mutex_unlock(&bucket->mutex);
 	}
-	rte_object_add_item(root, "record_list", array);
+	if(0==rte_array_get_size(array)){
+		goto out;
+	}
 
+	rte_object_add_item(root, "record_list", array);
 	str = rte_serialize_json(root);
 
 	printf("persist_record=%s\n", str);
-err_out:
+out:
 	rte_destroy_json(root);
 	return str;
 }
