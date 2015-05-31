@@ -66,7 +66,7 @@ int vsecplat_report_stats(struct thread *thread)
 {
 	char *str;
 	int len, w_len;
-	struct msg_head *msg=NULL;
+	struct msg_head msg;
 
 	printf("In vsecplat_report_stats.\n");
 
@@ -77,22 +77,23 @@ int vsecplat_report_stats(struct thread *thread)
 			goto no_count_report;
 		}
 		len = strlen(str);
-		conn_desc->send_len = len + sizeof(struct msg_head); 
-		msg = (struct msg_head *)malloc(conn_desc->send_len);
-		if(NULL==msg){
-			//TODO
-			free(str);
-			goto no_count_report;
+		conn_desc->send_len = len;
+		conn_desc->send_buf = str;
+		memset(&msg, 0, sizeof(struct msg_head));
+		msg.len = len + sizeof(struct msg_head);
+		msg.msg_type = NM_MSG_REPORTS;
+	
+		w_len = write(conn_desc->sock, (void *)&msg, sizeof(struct msg_head));
+		if(w_len<=0){ 
+			perror("socket write error:");
+			goto out;
 		}
-		memset((void *)msg, 0, conn_desc->send_len);
-		memcpy(msg->data, str, len);
-		free(str);  // clean the persist buffer
-		conn_desc->send_buf = (char *)msg;
-		msg->len = conn_desc->send_len;
-		msg->msg_type = NM_REPORT_COUNT;
+		if(w_len<sizeof(struct msg_head)){
+			//TODO,It should not be happen.
+		}
 	
 		w_len = write(conn_desc->sock, (void *)conn_desc->send_buf, conn_desc->send_len);
-		if(w_len<0){
+		if(w_len<=0){
 			//TODO
 			perror("socket write error:");
 			goto out;
@@ -100,7 +101,7 @@ int vsecplat_report_stats(struct thread *thread)
 		conn_desc->send_ofs += w_len;
 	}else{
 		w_len = write(conn_desc->sock, (void *)(conn_desc->send_buf+conn_desc->send_ofs), conn_desc->send_len - conn_desc->send_ofs);
-		if(w_len<0){
+		if(w_len<=0){
 			//TODO
 			perror("socket write error:");
 			goto out;
@@ -154,9 +155,10 @@ int vsecplat_deal_policy(struct thread *thread)
 	printf("vsecplat_deal_policy readlen=%d, msg len=%d type=%d policy:%s\n", readlen, msg->len, msg->msg_type, msg->data);
 
 	switch(msg->msg_type){
-		case NM_ADD_RULES:
-		case NM_DEL_RULES:
+		case NM_MSG_RULES:
 			vsecplat_parse_policy(msg->data);		
+			break;
+		case NM_MSG_REPORTS:
 			break;
 		default:
 			break;

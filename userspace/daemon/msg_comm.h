@@ -25,16 +25,15 @@ struct conn_desc{
 };
 
 enum{
-	NM_ADD_RULES=1,   /* manage center add the policy rules */
-	NM_DEL_RULES,	/* manage center del the policy rules */
-	NM_REPORT_COUNT,		/* vm report the packet records */
+	NM_MSG_RULES=1,
+	NM_MSG_REPORTS,
 };
 
 struct msg_head{
 	int len;
 	unsigned char msg_type;
 	char data[0];
-};
+}__attribute__((packed));
 
 int init_conn_desc(void);
 int vsecplat_timer_func(struct thread *thread);

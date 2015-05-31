@@ -2,7 +2,6 @@
 #include "rte_json.h"
 #include "nm_type.h"
 #include "nm_skb.h"
-#include "msg_comm.h"
 #include  "vsecplat_policy.h"
 
 static inline int bad_ip_address(char *str)
@@ -100,11 +99,11 @@ static int get_addr_obj_from_str(struct addr_obj *obj, const char *str)
 		strncpy(cp, str, len);
 		*(cp+len)='\0';
 		inet_aton(cp, &addr);
-		obj->net.mask = addr.s_addr;
+		obj->u.net.mask = addr.s_addr;
 		free(cp);
 		val = atoi(++pos);
 		masklen2ip(val, &addr);	
-		obj->net.length = addr.s_addr;
+		obj->u.net.length = addr.s_addr;
 	}else if(NULL!=(pos=strchr(str, '-'))){ // XX.XX.XX.XX-YY.YY.YY.YY
 		obj->type = IP_RANGE;
 		len = pos-str;	
@@ -116,11 +115,11 @@ static int get_addr_obj_from_str(struct addr_obj *obj, const char *str)
 		strncpy(cp, str, len);
 		*(cp+len)='\0';
 		inet_aton(cp, &addr);
-		obj->range.min = addr.s_addr;
+		obj->u.range.min = addr.s_addr;
 		free(cp);
 		pos++;
 		inet_aton(pos, &addr);
-		obj->range.max = addr.s_addr;
+		obj->u.range.max = addr.s_addr;
 	}else if(NULL!=(pos=strchr(str, '|'))){ // XX.XX.XX.XX |YY.YY.YY.YY
 		obj->type = IP_GROUP;
 		const char *tmp=str;
@@ -135,7 +134,7 @@ static int get_addr_obj_from_str(struct addr_obj *obj, const char *str)
 			strncpy(cp, tmp, len);
 			*(cp+len)='\0';
 			inet_aton(cp, &addr);
-			obj->group.ip_addrs[idx] = addr.s_addr;
+			obj->u.group.ip_addrs[idx] = addr.s_addr;
 			free(cp);
 			idx++;
 			tmp=pos+1;
@@ -151,7 +150,7 @@ static int get_addr_obj_from_str(struct addr_obj *obj, const char *str)
 	}else{ //single ip addr, XX.XX.XX.XX
 		obj->type = IP_HOST;
 		inet_aton(str, &addr);
-		obj->host_ip = addr.s_addr;
+		obj->u.host_ip = addr.s_addr;
 	}
 	return 0;
 }
@@ -372,23 +371,23 @@ static int test_match_addr_obj(struct addr_obj *addr_obj, const u32 ip)
 	int i=0;
 	switch(addr_obj->type){
 		case IP_HOST:
-			if(addr_obj->host_ip==ip){
+			if(addr_obj->u.host_ip==ip){
 				return 1;
 			}
 			break;
 		case IP_NET:
-			if((addr_obj->net.mask & addr_obj->net.length)==(ip&addr_obj->net.length)){
+			if((addr_obj->u.net.mask & addr_obj->u.net.length)==(ip&addr_obj->u.net.length)){
 				return 1;
 			}
 			break;
 		case IP_RANGE:
-			if((addr_obj->range.min<=ip)&&(addr_obj->range.max>=ip)){
+			if((addr_obj->u.range.min<=ip)&&(addr_obj->u.range.max>=ip)){
 				return 1;
 			}
 			break;
 		case IP_GROUP:
 			for(i=0;i<16;i++){
-				if(ip==addr_obj->group.ip_addrs[i]){
+				if(ip==addr_obj->u.group.ip_addrs[i]){
 					return 1;
 				}
 			}
@@ -429,7 +428,7 @@ int get_forward_policy(struct nm_skb *skb)
 		if(!test_match_addr_obj(&rule_entry->sip, saddr)){
 			goto not_match;
 		}
-		if(!test_match_addr_obj(&rule_entry->sip, daddr)){
+		if(!test_match_addr_obj(&rule_entry->dip, daddr)){
 			goto not_match;
 		}
 		if((rule_entry->sport!=0)&&(rule_entry->sport!=sport)){

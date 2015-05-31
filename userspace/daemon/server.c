@@ -74,7 +74,7 @@ int send_policy(int sock)
 	close(fd);
 	
 	msg->len = len + sizeof(struct msg_head);
-	msg->msg_type = NM_ADD_RULES;
+	msg->msg_type = NM_MSG_RULES;
 
 	ret = write(sock, msg, msg->len);
 	if(ret<0){
@@ -125,7 +125,7 @@ int msg_deal(struct thread *thread)
 
 	// if send complete
 	switch(msg->msg_type){
-		case NM_REPORT_COUNT:
+		case NM_MSG_REPORTS:
 			parse_report(msg);
 			break;
 		default:
@@ -171,7 +171,9 @@ int msg_sock_listen(struct thread *thread)
 
 	send_sock = accept_sock;
 
-	thread_add_timer(thread->master, send_msg, NULL, 5);
+//	thread_add_timer(thread->master, send_msg, NULL, 5);
+
+	send_policy(send_sock);
 
 	thread_add_read(thread->master, msg_deal, NULL, accept_sock);
 

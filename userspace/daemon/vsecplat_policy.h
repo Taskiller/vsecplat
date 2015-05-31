@@ -20,18 +20,20 @@ enum{
 };
 struct addr_obj{
 	int type;
-	u32 host_ip;
-	struct{
-		u32 min;
-		u32 max;
-	}range;
-	struct {
-		u32 mask;
-		u32 length;
-	}net;
-	struct{
-		u32 ip_addrs[16];
-	}group;
+	union{
+		u32 host_ip;
+		struct{
+			u32 min;
+			u32 max;
+		}range;
+		struct {
+			u32 mask;
+			u32 length;
+		}net;
+		struct{
+			u32 ip_addrs[16];
+		}group;
+	}u;
 };
 
 struct rule_entry{
@@ -51,6 +53,10 @@ struct forward_rules{
 	struct rule_entry *rule_entry;
 };
 
+enum{
+	NM_ADD_RULES,
+	NM_DEL_RULES
+};
 struct forward_rules_head{
 	struct list_head list;
 	// int count;
