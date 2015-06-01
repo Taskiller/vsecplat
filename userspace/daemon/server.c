@@ -119,6 +119,7 @@ int msg_deal(struct thread *thread)
 
 	if(readofs<readlen){
 		thread_add_read(thread->master, msg_deal, NULL, sock);
+		return 0;
 	}
 
 	printf("readofs %d, get msg len %d, msg_type %d\n", readofs, msg->len, msg->msg_type);

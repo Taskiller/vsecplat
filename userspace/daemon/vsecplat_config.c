@@ -1,8 +1,8 @@
 #include "rte_json.h"
 #include "vsecplat_config.h"
 
-// #define VSECPLATFORM_CFG_FILE "/usr/local/config.json"
-#define VSECPLATFORM_CFG_FILE "./config.json"
+#define VSECPLATFORM_CFG_FILE "/usr/local/config.json"
+// #define VSECPLATFORM_CFG_FILE "./config.json"
 struct vsecplat_config *global_vsecplat_config;
 
 static int str_to_mac(const char *bufp, unsigned char *ptr)
