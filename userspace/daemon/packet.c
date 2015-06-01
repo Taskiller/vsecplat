@@ -1,7 +1,9 @@
+#include <string.h>
 #include <unistd.h>
 #include "packet.h"
 #include "nm_vlan.h"
 #include "nm_ether.h"
+#include "vsecplat_config.h"
 #include "vsecplat_policy.h"
 #include "vsecplat_interface.h"
 #include "vsecplat_record.h"
@@ -90,7 +92,14 @@ static int packet_intercept(struct nm_skb *skb)
 
 static int packet_send(struct nm_skb *skb)
 {
-	skb->o_dev = nm_get_output_dev(); 
+	if(NULL==skb->o_dev){
+		skb->o_dev = nm_get_output_dev(); 
+	}
+
+	if(global_vsecplat_config->outport_desc_array[0].change_dst_mac){
+		memcpy(skb->mac.raw, global_vsecplat_config->outport_desc_array[0].dst_mac, NM_MAC_LEN);
+	}
+
 	nm_send(skb);
 	return 0;
 }
@@ -101,11 +110,6 @@ void *packet_handle_thread(void *unused)
 	struct nm_skb *skb=NULL;
 
 	do{
-	#if 0
-		printf("In packet_handle_thread.\n");
-		sleep(3);
-	#endif
-
 		skb = nm_recv();
 		if(NULL==skb){
 			continue;

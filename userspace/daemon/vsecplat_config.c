@@ -201,6 +201,7 @@ int parse_vsecplat_config(void)
 				goto out;
 			}
 			str_to_mac(tmp->u.val_str, global_vsecplat_config->outport_desc_array[idx].dst_mac);	
+			global_vsecplat_config->outport_desc_array[idx].change_dst_mac = 1;
 		}
 	}
 

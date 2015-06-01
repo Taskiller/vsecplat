@@ -76,13 +76,11 @@ int main(void)
 		return -1;
 	}
 
-#if 1
+#if 0
 	vsecplat_test_record();
 #endif
 
 #if 1
-	// packet_handle_thread(NULL);
-
 	ret = pthread_create(&thread_id, NULL, &packet_handle_thread, NULL);
 	if(ret<0){
 		// TODO

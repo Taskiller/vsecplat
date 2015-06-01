@@ -15,7 +15,7 @@ make_kernel()
 	cd $KSRC
 	make x86_64_defconfig
 	make j=4	
-	cp -f vmlinux ../rootfs/
+	# cp -f vmlinux ../rootfs/
 	cp -f arch/x86/boot/bzImage ../images/kernel.img
 }
 

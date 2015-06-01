@@ -136,7 +136,7 @@ get_next_if:
     skb->end = (unsigned char *)p + NM_BUF_SIZE - NM_END_RESERVED;
     skb->len = slot->len;
 
-#if 1
+#if 0
 	printf("recv %s, cur=%d, skb->data = %x %x %x %x %x %x: %x %x %x %x %x %x, %x %x %x %x\n",
 		dev->name, cur,
 		skb->data[0], skb->data[1], skb->data[2],

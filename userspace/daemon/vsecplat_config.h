@@ -20,8 +20,9 @@ struct inport_desc{
 
 struct outport_desc{
 	char name[NM_NAME_LEN];
-	unsigned char dst_mac[NM_MAC_LEN];
 	struct nm_dev *dev;
+	int change_dst_mac;
+	unsigned char dst_mac[NM_MAC_LEN];
 };
 
 struct vsecplat_config{
