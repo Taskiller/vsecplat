@@ -18,5 +18,6 @@ nm_bridge: bridge.o
 
 clean:
 	-@rm -rf $(CLEANFILES)
+	-@rm -f $(root_dir)/rootfs/usr/bin/$(PROGS)
 	
 

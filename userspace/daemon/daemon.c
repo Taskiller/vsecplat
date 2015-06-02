@@ -78,6 +78,7 @@ int main(void)
 
 #if 0
 	vsecplat_test_record();
+	packet_handle_thread(NULL);
 #endif
 
 #if 1

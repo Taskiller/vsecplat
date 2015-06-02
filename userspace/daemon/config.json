@@ -1,6 +1,6 @@
 {
 	"mgt_cfg":{"name":"eth0", "ipaddr":"192.168.1.140/24"},
-	"serv_cfg":{"ipaddr":"127.0.0.1", "port":8000},
+	"serv_cfg":{"ipaddr":"192.168.1.142", "port":8000},
 	"inport_list":[
 		{"name":"eth1"}
 	],

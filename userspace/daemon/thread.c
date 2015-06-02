@@ -1,6 +1,7 @@
 #include <sys/socket.h>
 #include <sys/select.h>
 #include <sys/time.h>
+#include <sys/sysinfo.h>
 // #include <linux/time.h>
 #include <errno.h>
 #include <stdio.h>
@@ -195,6 +196,15 @@ struct thread *thread_add_write(struct thread_master *m,
 	return thread;
 }
 
+#if 0
+static long nm_get_uptime(void)
+{
+	struct sysinfo info;
+	sysinfo(&info);
+	return info.uptime;
+}
+#endif
+
 struct thread *thread_add_timer(struct thread_master *m,
 				int (*func)(struct thread *), void *arg, long timer)
 {
@@ -204,7 +214,7 @@ struct thread *thread_add_timer(struct thread_master *m,
 
 	thread = thread_get(m, THREAD_TIMER, func, arg );
 	gettimeofday(&timer_now, NULL);
-	// timer_now.tv_sec = ;
+	// timer_now.tv_sec = nm_get_uptime();
 	timer_now.tv_sec += timer;
 	thread->u.sands = timer_now;
 
@@ -302,6 +312,7 @@ struct thread *thread_fetch(struct thread_master *m, struct thread *fetch)
 
 	while(1){
 		gettimeofday(&timer_now, NULL);
+		// timer_now.tv_sec = nm_get_uptime();
 		for(thread=m->timer.head; thread; thread=thread->next){
 			if(timeval_cmp(timer_now, thread->u.sands)>=0){
 				thread_list_delete(&m->timer, thread);
@@ -318,7 +329,7 @@ struct thread *thread_fetch(struct thread_master *m, struct thread *fetch)
 		exceptfd = m->exceptfd;
 
 		timer_val.tv_sec = 0;
-		timer_val.tv_usec = 10;
+		timer_val.tv_usec = 100;
 		num = select(FD_SETSIZE, &readfd, &writefd, &exceptfd, &timer_val);
 		if(num==0){
 			continue;

@@ -49,6 +49,7 @@ make_clean()
 
 	cd $root_dir/userspace/lib
 	make clean
+	rm -rf $root_dir/rootfs/lib64/libnetmap.so
 
 	rm -rf $root_dir/rootfs/vmlinux
 	rm -rf $root_dir/rootfs/usr/drv/*.ko

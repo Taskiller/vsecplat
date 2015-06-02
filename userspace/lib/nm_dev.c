@@ -81,7 +81,7 @@ int nm_registe_dev(struct nm_dev *dev)
 
 	global_nm_desc->fds[fds_idx].fd = dev->fd;
 	global_nm_desc->fds[fds_idx].events |= POLLIN;
-	global_nm_desc->fds[fds_idx].events |= POLLOUT;
+	// global_nm_desc->fds[fds_idx].events |= POLLOUT;
 	global_nm_desc->nm_dev[fds_idx] = dev;
 	global_nm_desc->fds_num++;
 
