@@ -1,10 +1,8 @@
 {
 	"action":1,
 	"forward_rules":[
-	  	{"id":1, "sip":"10.0.0.1/24", "dip":"20.0.0.1/24", "sport":1022,"dport":123,"proto":17, "vlanid":0, "forward":0},
-	  	{"id":2, "sip":"20.0.0.1/24", "dip":"30.0.0.1/24", "sport":999,"dport":700,"proto":17, "vlanid":0, "forward":1},
-	 	{"id":3, "sip":"30.0.0.1|30.0.0.12|30.0.0.23", "dip":"20.0.0.1/24", "sport":0,"dport":0,"proto":17, "vlanid":0, "forward":1},
-	  	{"id":4, "sip":"40.0.0.1-40.0.0.23", "dip":"30.0.0.1/24", "sport":0,"dport":0,"proto":17, "vlanid":0, "forward":1}
+	{"id":1, "sip":"192.168.1.1/24", "dip":"0.0.0.0", "sport":0,"dport":0,"proto":0, "vlanid":0, "forward":1},
+	{"id":2, "sip":"0.0.0.0", "dip":"192.168.1.1/24", "sport":0,"dport":0,"proto":0, "vlanid":0, "forward":1}
 	]
 }
 

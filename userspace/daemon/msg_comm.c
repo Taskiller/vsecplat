@@ -61,7 +61,7 @@ void clean_conn_desc(void)
 }
 
 extern struct thread_master *master;
-#define VSECPLAT_REPORT_INTERVAL 20
+#define VSECPLAT_REPORT_INTERVAL 60 // report every one minute
 int vsecplat_report_stats(struct thread *thread)
 {
 	char *str;

@@ -371,7 +371,7 @@ static int test_match_addr_obj(struct addr_obj *addr_obj, const u32 ip)
 	int i=0;
 	switch(addr_obj->type){
 		case IP_HOST:
-			if(addr_obj->u.host_ip==ip){
+			if((addr_obj->u.host_ip==0)||(addr_obj->u.host_ip==ip)){
 				return 1;
 			}
 			break;
@@ -467,8 +467,7 @@ int init_policy_list(void)
 	return 0;
 }
 
-#if 0
-int test_policy_parse(void)
+int add_test_policy(void)
 {
 	int fd=0;
 	int len=0;
@@ -476,7 +475,7 @@ int test_policy_parse(void)
 	char *file_buf=NULL;
 
 	memset(&stat_buf, 0, sizeof(struct stat));
-	stat("./add_rule.json", &stat_buf);
+	stat("/usr/local/add_rule.json", &stat_buf);
 	len = stat_buf.st_size;
 	
 	file_buf = malloc(len);
@@ -484,7 +483,7 @@ int test_policy_parse(void)
 		return -1;
 	}
 	memset(file_buf, 0, len);
-	fd = open("./add_rule.json", O_RDONLY);
+	fd = open("/usr/local/add_rule.json", O_RDONLY);
 	if(fd<0){
 		free(file_buf);
 		return -1;
@@ -493,6 +492,6 @@ int test_policy_parse(void)
 	close(fd);
 
 	vsecplat_parse_policy(file_buf);
+	free(file_buf);
 	return 0;
 }
-#endif

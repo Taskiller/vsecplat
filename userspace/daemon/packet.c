@@ -84,7 +84,6 @@ static int packet_intercept(struct nm_skb *skb)
 			break;
 	}
 
-	ret=NM_PKT_FORWARD; //for test
 	vsecplat_record_pkt(skb);
 
 	return ret;

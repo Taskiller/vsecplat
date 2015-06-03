@@ -92,7 +92,8 @@ int parse_report(struct msg_head *msg)
 	return 0;
 }
 
-static char readbuf[4096];
+#define BUF_LEN 1024*64
+static char readbuf[BUF_LEN];
 static int readlen=0;
 static int readofs=0;
 static int send_sock=0;
@@ -132,7 +133,7 @@ int msg_deal(struct thread *thread)
 			break;
 	}
 	
-	memset(readbuf, 0, 4096);
+	memset(readbuf, 0, BUF_LEN);
 	readlen = 0;
 	readofs = 0;
 out:

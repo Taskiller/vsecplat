@@ -54,7 +54,7 @@ struct forward_rules{
 };
 
 enum{
-	NM_ADD_RULES,
+	NM_ADD_RULES=1,
 	NM_DEL_RULES
 };
 struct forward_rules_head{
@@ -67,5 +67,5 @@ int init_policy_list(void);
 int vsecplat_parse_policy(const char *buf);
 int get_forward_policy(struct nm_skb *skb);
 
-// int test_policy_parse(void);
+int add_test_policy(void);
 #endif

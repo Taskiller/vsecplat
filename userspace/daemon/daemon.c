@@ -77,7 +77,7 @@ int main(void)
 	}
 
 #if 0
-	vsecplat_test_record();
+	add_test_policy();
 	packet_handle_thread(NULL);
 #endif
 
