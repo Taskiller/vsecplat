@@ -68,7 +68,7 @@ int vsecplat_report_stats(struct thread *thread)
 	int len, w_len;
 	struct msg_head msg;
 
-	printf("In vsecplat_report_stats.\n");
+	// printf("In vsecplat_report_stats.\n");
 
 	if(conn_desc->send_ofs==0){
 		str = persist_record();
@@ -179,7 +179,7 @@ int vsecplat_timer_func(struct thread *thread)
 	int ret;
 	struct sockaddr_in serv;
 
-	printf("In vsecplat_timer_func\n");
+	// printf("In vsecplat_timer_func\n");
 
 	switch(conn_desc->status){
 		case VSECPLAT_CONNECTING_SERV:
