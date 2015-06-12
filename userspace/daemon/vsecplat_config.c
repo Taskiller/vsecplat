@@ -1,8 +1,8 @@
 #include "rte_json.h"
 #include "vsecplat_config.h"
 
-#define VSECPLATFORM_CFG_FILE "/usr/local/config.json"
-// #define VSECPLATFORM_CFG_FILE "./config.json"
+#define VSECPLATFORM_CFG_FILE "/mnt/config.json"
+// #define VSECPLATFORM_CFG_FILE "/usr/local/config.json"
 struct vsecplat_config *global_vsecplat_config;
 
 static int str_to_mac(const char *bufp, unsigned char *ptr)
@@ -51,21 +51,26 @@ int parse_vsecplat_config(void)
 	struct rte_json *tmp=NULL;
 	int idx=0;
 
-	memset(&stat_buf, 0, sizeof(struct stat));
-	stat(VSECPLATFORM_CFG_FILE, &stat_buf);
-	len = stat_buf.st_size;
-	
-	file_buf = malloc(len);
-	if(NULL==file_buf){
-		return -1;
-	}
-	memset(file_buf, 0, len);
 	fd = open(VSECPLATFORM_CFG_FILE, O_RDONLY);
 	if(fd<0){
 		printf("Failed to open vsecplat config file.\n");
-		free(file_buf);
 		return -1;
 	}
+
+	memset(&stat_buf, 0, sizeof(struct stat));
+	if(fstat(fd, &stat_buf)<0){
+		printf("Failed to get file length.\n");
+		close(fd);
+		return -1;
+	}
+	len = stat_buf.st_size;
+	file_buf = malloc(len);
+	if(NULL==file_buf){
+		close(fd);
+		return -1;
+	}
+	memset(file_buf, 0, len);
+	
 	read(fd, file_buf, len);
 	close(fd);
 
