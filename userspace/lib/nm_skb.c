@@ -194,6 +194,7 @@ int nm_send(struct nm_skb *skb)
 		rx_slot = &rx_ring->slot[skb->rx_slot_idx];
 		tx_ring = get_tx_ring(tx_dev);
 		if(tx_ring==NULL){
+			printf("No tx space, Need do TXSYNC.\n");
 		 	ioctl(tx_dev->fd, NIOCTXSYNC, NULL); // No tx space, Need do TXSYNC
 			nm_tx_skb_push(skb);
 			return 0;
@@ -211,6 +212,8 @@ int nm_send(struct nm_skb *skb)
 		cur = nm_ring_next(tx_ring, cur);
 		tx_ring->head = tx_ring->cur = cur;
 	}
+
+	ioctl(tx_dev->fd, NIOCTXSYNC, NULL);
 
 	return 0;
 }
