@@ -28,6 +28,21 @@ make_drivers()
 	find ./drivers -name *.ko |xargs -I {} cp -f {} rootfs/usr/drv/
 }
 
+make_iso()
+{
+	rm -rf images/vsecplat.iso
+	rm -rf isoroot/kernel.img
+	rm -rf isoroot/rootfs.img
+
+	cp -afp images/kernel.img isoroot/
+	cp -afp images/rootfs.img isoroot/
+
+	sync
+
+	mkisofs -o vsecplat.iso -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table isoroot
+	mv vsecplat.iso images/
+}
+
 make_clean()
 {
 	cd $root_dir
@@ -37,7 +52,7 @@ make_clean()
 	make clean
 
 	cd $root_dir/images
-	rm -rf *.img
+	rm -rf *.img *.iso
 
 
 	cd $root_dir/userspace/example
@@ -145,6 +160,9 @@ else
 				;;
 			-c)
 				make_clean
+				;;
+			-iso)
+				make_iso
 				;;
 			-h)
 				show_usage
