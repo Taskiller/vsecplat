@@ -1,5 +1,6 @@
 linux-3.18.8/
 rootfs/
 images/
+*.img
 *.swp
 *.o
