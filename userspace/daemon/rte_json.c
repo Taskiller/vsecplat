@@ -438,7 +438,7 @@ static char *json_strdup(const char *str)
 	return copy;
 }
 
-static char *print_value(struct rte_json *json, int depth);
+static char *print_value(struct rte_json *json, int depth, int fmt);
 static char *print_number(struct rte_json *json)
 {
 	char *str=NULL;
@@ -516,7 +516,7 @@ static char *print_string(struct rte_json *json)
 	return print_string_ptr(json->u.val_str);
 }
 
-static char *print_array(struct rte_json *json, int depth)
+static char *print_array(struct rte_json *json, int depth, int fmt)
 {
 	char **entries;
 	char *out=NULL, *ptr, *value;
@@ -547,10 +547,10 @@ static char *print_array(struct rte_json *json, int depth)
 
 	item=json->member;
 	while((NULL!=item) && !fail){
-		value=print_value(item, depth+1);
+		value=print_value(item, depth+1, fmt);
 		entries[i++]=value;
 		if(value){
-			len += strlen(value)+3; // 
+			len += strlen(value)+2+(fmt?1:0); // 
 		}else{
 			fail=1;
 		}
@@ -581,7 +581,9 @@ static char *print_array(struct rte_json *json, int depth)
 		ptr+=strlen(entries[i]);
 		if(i!=(numentries-1)){
 			*ptr++=',';
-			*ptr++=' ';
+			if(fmt){
+				*ptr++=' ';
+			}
 			*ptr='\0';
 		}
 		free(entries[i]);
@@ -592,12 +594,12 @@ static char *print_array(struct rte_json *json, int depth)
 	return out;
 }
 
-static char *print_object(struct rte_json *json, int depth)
+static char *print_object(struct rte_json *json, int depth, int fmt)
 {
 	char *out=NULL, *ptr, *name, *value;
 	char **entries=NULL, **names=NULL;
 	int numentries=0;
-	int len=4; //用于存放{\n }\0
+	int len=7; 
 	int i=0,j=0;
 	int fail=0;
 	struct rte_json *item=json->member;
@@ -608,15 +610,17 @@ static char *print_object(struct rte_json *json, int depth)
 		item=item->next;
 	}
 	if(0==numentries){ // 如果是空Object
-		out=(char *)malloc(depth+4); // 多分4个字符,用于存放{\n}\0
+		out=(char *)malloc(fmt?(depth+4):3); // 多分4个字符,用于存放{\n}\0
 		if(NULL==out){
 			return NULL;
 		}
 		ptr=out;
 		*ptr++='{';
-		*ptr++='\n';
-		for(i=0;i<depth-1;i++){
-			*ptr++='\t';
+		if(fmt){
+			*ptr++='\n';
+			for(i=0;i<depth-1;i++){
+				*ptr++='\t';
+			}
 		}
 		*ptr++='}';
 		*ptr++='\0';
@@ -637,13 +641,15 @@ static char *print_object(struct rte_json *json, int depth)
 
 	item = json->member;
 	depth++;
-	len += depth;
+	if(fmt){
+		len += depth;
+	}
 	while(NULL!=item){ // 分别初始化每个member的名和值
 		names[i] = name = print_string_ptr(item->name);
-		entries[i] = value = print_value(item, depth);
+		entries[i] = value = print_value(item, depth, fmt);
 		i++;	
 		if(name && value){
-			len += strlen(name)+strlen(value)+3+depth; // 多分3个字符,用于存放:,\n
+			len += strlen(name)+strlen(value)+2+(fmt?(2+depth):0); 
 		}else{
 			fail=1;
 		}
@@ -671,21 +677,30 @@ static char *print_object(struct rte_json *json, int depth)
 	
 	*out='{';	
 	ptr=out+1;
-	*ptr++='\n';
+	if(fmt){
+		*ptr++='\n';
+	}
 	*ptr='\0';
 	for(i=0;i<numentries;i++){
-		for(j=0;j<depth;j++){
-			*ptr++='\t';
+		if(fmt){
+			for(j=0;j<depth;j++){
+				*ptr++='\t';
+			}
 		}
 		strcpy(ptr, names[i]);
 		ptr+=strlen(names[i]);
 		*ptr++=':';
+		if(fmt){
+			*ptr++='\t';
+		}
 		strcpy(ptr, entries[i]);
 		ptr+=strlen(entries[i]);
 		if(i!=(numentries-1)){ // 最后一个member后面没有逗号
 			*ptr++=',';
 		}
-		*ptr++='\n';
+		if(fmt){
+			*ptr++='\n';
+		}
 		*ptr='\0';
 		free(names[i]); // 释放中间分配的内存
 		free(entries[i]);
@@ -693,8 +708,10 @@ static char *print_object(struct rte_json *json, int depth)
 	free(names);
 	free(entries);
 
-	for(i=0;i<depth-1;i++){
-		*ptr++='\t';
+	if(fmt){
+		for(i=0;i<depth-1;i++){
+			*ptr++='\t';
+		}
 	}
 	*ptr++='}';
 	*ptr='\0';
@@ -702,7 +719,7 @@ static char *print_object(struct rte_json *json, int depth)
 	return out;
 }
 
-static char *print_value(struct rte_json *json, int depth)
+static char *print_value(struct rte_json *json, int depth, int fmt)
 {
 	char *out=0;	
 	if(NULL==json){
@@ -727,10 +744,10 @@ static char *print_value(struct rte_json *json, int depth)
 			out = print_string(json);
 			break;
 		case JSON_OBJECT:
-			out = print_object(json, depth);
+			out = print_object(json, depth, fmt);
 			break;
 		case JSON_ARRAY:
-			out = print_array(json, depth);
+			out = print_array(json, depth, fmt);
 			break;
 	}
 	return out;
@@ -739,9 +756,9 @@ static char *print_value(struct rte_json *json, int depth)
 /*
  * 根据JSON结构体中的内容， 输出JSON文本
  * */
-char *rte_serialize_json(struct rte_json *json)
+char *rte_serialize_json(struct rte_json *json, int fmt)
 {
-	return print_value(json, 0);
+	return print_value(json, 0, fmt);
 }
 
 int rte_array_get_size(struct rte_json *array)

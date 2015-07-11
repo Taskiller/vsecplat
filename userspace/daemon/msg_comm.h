@@ -11,7 +11,9 @@ enum{
 };
 
 struct conn_desc{
-	int sock;
+	int tcpsock;
+	int udpsock;
+	struct sockaddr_in udpaddr;
 	int timeout;
 	int status;	
 	

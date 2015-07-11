@@ -224,7 +224,7 @@ char *persist_record(void)
 	}
 
 	rte_object_add_item(root, "record_list", array);
-	str = rte_serialize_json(root);
+	str = rte_serialize_json(root, 1);
 
 	printf("persist_record=%s\n", str);
 out:

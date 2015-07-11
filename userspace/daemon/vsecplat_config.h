@@ -10,7 +10,8 @@ struct mgt_cfg{
 
 struct serv_cfg{
 	char ipaddr[NM_ADDR_STR_LEN];
-	int port;	
+	int tcpport;
+	int udpport;
 };
 
 struct inport_desc{

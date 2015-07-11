@@ -125,12 +125,21 @@ int parse_vsecplat_config(void)
 			goto out;
 		}
 		strncpy(serv_cfg->ipaddr, tmp->u.val_str, NM_ADDR_STR_LEN);
-		tmp = rte_object_get_item(item, "port");
+
+		tmp = rte_object_get_item(item, "tcpport");
 		if(NULL==tmp){
-			// TODO
+			printf("Failed to parse tcpport.\n");
 			goto out;
 		}
-		serv_cfg->port = tmp->u.val_int;
+		serv_cfg->tcpport = tmp->u.val_int;
+
+		tmp = rte_object_get_item(item, "udpport");
+		if(NULL==tmp){
+			printf("Failed to parse udpport.\n");
+			goto out;
+		}
+		serv_cfg->udpport = tmp->u.val_int;
+
 		global_vsecplat_config->serv_cfg = serv_cfg;
 	}
 

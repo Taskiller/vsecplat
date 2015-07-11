@@ -24,7 +24,7 @@ int init_conn_desc(void)
 
 	conn_desc->recv_buf = (char *)malloc(NM_RECV_BUF_LEN);
 	if(NULL==conn_desc->recv_buf){
-		//TODO
+		printf("Failed to alloc receive buffer.\n");
 	}
 	memset(conn_desc->recv_buf, 0, NM_RECV_BUF_LEN*sizeof(char));
 	conn_desc->status = VSECPLAT_CONNECTING_SERV;
@@ -41,7 +41,8 @@ void clean_conn_desc(void)
 		return;
 	}
 
-	close(conn_desc->sock);
+	close(conn_desc->tcpsock);
+	close(conn_desc->udpsock);
 
 	if(conn_desc->recv_buf){
 		recv_buf = conn_desc->recv_buf;
@@ -64,6 +65,7 @@ extern struct thread_master *master;
 #define VSECPLAT_REPORT_INTERVAL 60 // report every one minute
 int vsecplat_report_stats(struct thread *thread)
 {
+#if 0
 	char *str;
 	int len, w_len;
 	struct msg_head msg;
@@ -94,7 +96,6 @@ int vsecplat_report_stats(struct thread *thread)
 	
 		w_len = write(conn_desc->sock, (void *)conn_desc->send_buf, conn_desc->send_len);
 		if(w_len<=0){
-			//TODO
 			perror("socket write error:");
 			goto out;
 		}
@@ -102,7 +103,6 @@ int vsecplat_report_stats(struct thread *thread)
 	}else{
 		w_len = write(conn_desc->sock, (void *)(conn_desc->send_buf+conn_desc->send_ofs), conn_desc->send_len - conn_desc->send_ofs);
 		if(w_len<=0){
-			//TODO
 			perror("socket write error:");
 			goto out;
 		}
@@ -125,6 +125,9 @@ no_count_report:
 
 out:
 	clean_conn_desc();
+	thread_add_timer(master, vsecplat_timer_func, NULL, conn_desc->timeout);
+#endif
+
 	thread_add_timer(master, vsecplat_timer_func, NULL, conn_desc->timeout);
 	return 0;
 }
@@ -169,7 +172,7 @@ int vsecplat_deal_policy(struct thread *thread)
 	conn_desc->recv_ofs = 0;
 
 out:
-	thread_add_read(master, vsecplat_deal_policy, NULL, conn_desc->sock);	
+	thread_add_read(master, vsecplat_deal_policy, NULL, conn_desc->tcpsock);
 	return 0;
 }
 
@@ -183,34 +186,48 @@ int vsecplat_timer_func(struct thread *thread)
 
 	switch(conn_desc->status){
 		case VSECPLAT_CONNECTING_SERV:
+			// create tcpsock to receive policy
 			sock = socket(AF_INET, SOCK_STREAM, 0);
 			if(sock<0){
+				printf("Failed to create tcp socket.\n");
 				goto out;
 			}
 			memset(&serv, 0, sizeof(struct sockaddr_in));
 			serv.sin_family = AF_INET;
-			serv.sin_port = htons(global_vsecplat_config->serv_cfg->port);
+			serv.sin_port = htons(global_vsecplat_config->serv_cfg->tcpport);
 			inet_pton(AF_INET, global_vsecplat_config->serv_cfg->ipaddr, &serv.sin_addr);
 
 			ret = connect(sock, (struct sockaddr *)&serv, sizeof(struct sockaddr_in));	
 			if(ret<0){
-				close(sock);
 				printf("failed to connect server\n");
+				close(sock);
 				goto out;
 			}
+			conn_desc->tcpsock = sock;
+
+			// create udpsock to report statistics
+			sock = socket(AF_INET, SOCK_DGRAM, 0);
+			if(sock<0){
+				printf("Failed to create udp socket.\n");
+				goto out;
+			}
+			conn_desc->udpaddr.sin_family = AF_INET;
+			inet_pton(AF_INET, global_vsecplat_config->serv_cfg->ipaddr, &conn_desc->udpaddr.sin_addr);
+			conn_desc->udpaddr.sin_port = htons(global_vsecplat_config->serv_cfg->udpport);
+			conn_desc->udpsock = sock;
+
 			conn_desc->status = VSECPLAT_CONNECT_OK;
-			conn_desc->sock = sock;
-			
+
 			break;
 
 		case VSECPLAT_CONNECT_OK:
 			conn_desc->status = VSECPLAT_RUNNING;
-			thread_add_read(master, vsecplat_deal_policy, NULL, conn_desc->sock);	
 			conn_desc->timeout = VSECPLAT_REPORT_INTERVAL;
+			thread_add_read(master, vsecplat_deal_policy, NULL, conn_desc->tcpsock);
 			break;
 
 		case VSECPLAT_RUNNING:
-			thread_add_write(master, vsecplat_report_stats, NULL, conn_desc->sock);
+			thread_add_write(master, vsecplat_report_stats, NULL, conn_desc->udpsock);
 			return 0;
 
 		default:

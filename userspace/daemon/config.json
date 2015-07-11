@@ -1,8 +1,9 @@
 {
-	"mgt_cfg":{"name":"eth0", "ipaddr":"192.168.1.140/24"},
-	"serv_cfg":{"ipaddr":"192.168.1.142", "port":8000},
+	"mgt_cfg":{"name":"eth0", "ipaddr":"192.168.1.146/24"},
+	"serv_cfg":{"ipaddr":"192.168.1.142", "tcpport":8000, "udpport":8001},
 	"inport_list":[
-		{"name":"eth1"}
+		{"name":"eth1"},
+		{"name":"eth2"}
 	],
-	"outport_list":[{"name":"eth2", "dst_mac":"52:00:00:00:01:01"}]
+	"outport_list":[{"name":"eth3", "dst_mac":"52:00:00:00:01:01"}]
 }
