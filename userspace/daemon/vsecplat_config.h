@@ -6,11 +6,11 @@
 struct mgt_cfg{
 	char name[NM_NAME_LEN];
 	char ipaddr[NM_ADDR_STR_LEN];
+	int tcpport;
 };
 
 struct serv_cfg{
 	char ipaddr[NM_ADDR_STR_LEN];
-	int tcpport;
 	int udpport;
 };
 
@@ -22,8 +22,10 @@ struct inport_desc{
 struct outport_desc{
 	char name[NM_NAME_LEN];
 	struct nm_dev *dev;
+#if 0
 	int change_dst_mac;
 	unsigned char dst_mac[NM_MAC_LEN];
+#endif
 };
 
 struct vsecplat_config{

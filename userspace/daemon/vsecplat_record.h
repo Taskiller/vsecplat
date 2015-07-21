@@ -14,6 +14,7 @@ struct record_entry{
 	u32 proto;
 	u16 vlanid;
 	u64 count;
+	u64 packetsize;
 };
 
 struct record_bucket{

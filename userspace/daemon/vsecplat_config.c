@@ -1,8 +1,8 @@
 #include "rte_json.h"
 #include "vsecplat_config.h"
 
-#define VSECPLATFORM_CFG_FILE "/mnt/config.json"
-// #define VSECPLATFORM_CFG_FILE "/usr/local/config.json"
+// #define VSECPLATFORM_CFG_FILE "/mnt/config.json"
+#define VSECPLATFORM_CFG_FILE "./config.json"
 struct vsecplat_config *global_vsecplat_config;
 
 static int str_to_mac(const char *bufp, unsigned char *ptr)
@@ -108,6 +108,14 @@ int parse_vsecplat_config(void)
 			goto out;
 		}
 		strncpy(mgt_cfg->ipaddr, tmp->u.val_str, NM_ADDR_STR_LEN);
+
+		tmp = rte_object_get_item(item, "tcpport");
+		if(NULL==tmp){
+			printf("Failed to parse tcpport.\n");
+			goto out;
+		}
+		mgt_cfg->tcpport = tmp->u.val_int;
+
 		global_vsecplat_config->mgt_cfg = mgt_cfg;
 	}
 
@@ -125,13 +133,6 @@ int parse_vsecplat_config(void)
 			goto out;
 		}
 		strncpy(serv_cfg->ipaddr, tmp->u.val_str, NM_ADDR_STR_LEN);
-
-		tmp = rte_object_get_item(item, "tcpport");
-		if(NULL==tmp){
-			printf("Failed to parse tcpport.\n");
-			goto out;
-		}
-		serv_cfg->tcpport = tmp->u.val_int;
 
 		tmp = rte_object_get_item(item, "udpport");
 		if(NULL==tmp){
@@ -206,6 +207,7 @@ int parse_vsecplat_config(void)
 			}
 			strncpy(global_vsecplat_config->outport_desc_array[idx].name, tmp->u.val_str, NM_NAME_LEN); 
 
+		#if 0
 			tmp = rte_object_get_item(entry, "dst_mac");
 			if(NULL==tmp){
 				continue;
@@ -216,6 +218,7 @@ int parse_vsecplat_config(void)
 			}
 			str_to_mac(tmp->u.val_str, global_vsecplat_config->outport_desc_array[idx].dst_mac);	
 			global_vsecplat_config->outport_desc_array[idx].change_dst_mac = 1;
+		#endif
 		}
 	}
 

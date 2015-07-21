@@ -95,9 +95,11 @@ static int packet_send(struct nm_skb *skb)
 		skb->o_dev = nm_get_output_dev(); 
 	}
 
+#if 0
 	if(global_vsecplat_config->outport_desc_array[0].change_dst_mac){
 		memcpy(skb->mac.raw, global_vsecplat_config->outport_desc_array[0].dst_mac, NM_MAC_LEN);
 	}
+#endif
 
 	nm_send(skb);
 	return 0;

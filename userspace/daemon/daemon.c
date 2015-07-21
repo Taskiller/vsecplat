@@ -10,6 +10,7 @@
 #include <unistd.h>
 
 #include "thread.h"
+#include "nm_log.h"
 #include "msg_comm.h"
 #include "packet.h"
 #include "vsecplat_config.h"
@@ -22,8 +23,15 @@ int main(void)
 {
 	int ret=0;
 	struct thread thread;
+	int sock;
 
-	pthread_t thread_id;
+	pthread_t packet_thread_id;
+
+	ret = nm_log_init();
+	if(ret<0){
+		printf("failed to init log.\n");
+		return -1;
+	}
 
 	// parse configfile and init global descriptor: global_vsecplat_config
 	ret = parse_vsecplat_config();	
@@ -46,7 +54,7 @@ int main(void)
 		return -1;
 	}
 
-#if 1
+#if 0 // Disable to test function on host
 	// setup mgt interface ip address and set it to up
 	ret = setup_mgt_interface();
 	if(ret<0){
@@ -76,33 +84,45 @@ int main(void)
 		return -1;
 	}
 
-#if 0
+#if 0 // For test
 	add_test_policy();
 	packet_handle_thread(NULL);
 #endif
 
-#if 1
-	ret = pthread_create(&thread_id, NULL, &packet_handle_thread, NULL);
+#if 0
+	/* 创建处理数据包的线程 */
+	ret = pthread_create(&packet_thread_id, NULL, &packet_handle_thread, NULL);
 	if(ret<0){
-		// TODO
+		nm_log("failed to create packet thread.\n");
 		return -1;
 	}
 #endif
 
-#if 1
 	// manage thread 
 	master = thread_master_create();
 	if(NULL==master){
-		//TODO
+		nm_log("failed to alloc master.\n");
 		return -1;
 	}
 
-	thread_add_timer(master, vsecplat_timer_func, NULL, 5);	
-	memset(&thread, 0, sizeof(struct thread));
+#if 1
+	/* 报告统计数据的线程 */
+	nm_log("Add report stats thread.\n");
+	thread_add_timer(master, vsecplat_report_stats, NULL, VSECPLAT_REPORT_INTERVAL);
+#endif
 
+#if 1
+	sock = create_listen_socket();
+	if(sock<0){
+		nm_log("failed to create socket.\n");
+		return -1;
+	}
+	thread_add_read(master, vsecplat_listen_func, NULL, sock);
+#endif
+
+	memset(&thread, 0, sizeof(struct thread));
 	while(thread_fetch(master, &thread)){
 		thread_call(&thread);
 	}
-#endif
 	return 0;
 }

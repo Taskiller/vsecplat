@@ -4,14 +4,14 @@
 #include "thread.h"
 
 enum{
-	VSECPLAT_CONNECTING_SERV=0,
+	VSECPLAT_WAIT_CONNECTING=0,
 	VSECPLAT_CONNECT_OK,
 	VSECPLAT_RUNNING,
 	VSECPLAT_STATUS_MAX
 };
 
 struct conn_desc{
-	int tcpsock;
+	// int tcpsock;
 	int udpsock;
 	struct sockaddr_in udpaddr;
 	int timeout;
@@ -33,11 +33,16 @@ enum{
 
 struct msg_head{
 	int len;
-	unsigned char msg_type;
+	int msg_type;
 	char data[0];
 }__attribute__((packed));
 
+#define VSECPLAT_REPORT_INTERVAL 6 // 每隔60秒报告一次统计信息
+
 int init_conn_desc(void);
+int create_listen_socket(void);
 int vsecplat_timer_func(struct thread *thread);
+int vsecplat_report_stats(struct thread *thread);
+int vsecplat_listen_func(struct thread *thread);
 
 #endif
