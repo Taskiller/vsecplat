@@ -1,4 +1,4 @@
-TARGETS := vsecplat  server
+TARGETS := vsecplat test_deamon
 
 target_OBJECTS = objs/daemon.o \
 				 objs/thread.o \
@@ -13,7 +13,7 @@ target_OBJECTS = objs/daemon.o \
 				 objs/tea_crypt.o \
 				 objs/nm_log.o
 
-server_OBJECTS = objs/server.o \
+test_deamon_OBJECTS = objs/test_deamon.o \
 				 objs/thread.o \
 				 objs/tea_crypt.o
 
@@ -31,10 +31,10 @@ all: $(TARGETS)
 vsecplat: $(target_OBJECTS) 
 	$(LINK) $(target_OBJECTS) $(LIBS) $(LIBS_INCLUDE)
 
-server: $(server_OBJECTS) 
-	$(LINK) $(server_OBJECTS) $(LIBS) $(LIBS_INCLUDE)
+test_deamon: $(test_deamon_OBJECTS)
+	$(LINK) $(test_deamon_OBJECTS) $(LIBS) $(LIBS_INCLUDE)
 
-objs/server.o:server.c
+objs/test_deamon.o:test_deamon.c
 	$(COMPILE) -c -o $@ $<
 
 objs/daemon.o:daemon.c
