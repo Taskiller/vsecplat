@@ -8,6 +8,7 @@
 #include <arpa/inet.h>
 
 #include "nm_log.h"
+#include "rte_json.h"
 #include "vsecplat_config.h"
 #include "vsecplat_policy.h"
 #include "vsecplat_record.h"
@@ -120,32 +121,44 @@ void clean_conn_desc(void)
 extern struct thread_master *master;
 int vsecplat_report_stats(struct thread *thread)
 {
-#if 0
-	char *str;
+	int ret=0;
 	int len=0, w_len=0;
 	struct msg_head *msg=(struct msg_head *)conn_desc->send_buf;
+	struct list_head *pos=NULL, *tmp=NULL;
+	struct record_json_item *record_json_item=NULL;
 
+	printf("In vsecplat_report_stats\n");
 
 	memset(conn_desc->send_buf, 0, NM_SEND_BUF_LEN);
-	while((str=persist_record())!=NULL){
-		len = strlen(str);
+	ret= vsecplat_persist_record();
+	if(ret<0){
+		nm_log("vsecplat_persist_record return %d.\n", ret);
+		return -1;
+	}
+
+	list_for_each_safe(pos, tmp, &global_record_json_list){
+		record_json_item = list_entry(pos, struct record_json_item, list);
+		record_json_item->json_str = rte_serialize_json(record_json_item->root, JSON_WITHOUT_FORMAT);
+		if(NULL==record_json_item->json_str){
+			goto out;
+		}
+		len = strlen(record_json_item->json_str);
 		conn_desc->send_len = len+sizeof(struct msg_head);
 		msg->len = len + sizeof(struct msg_head);
 		msg->msg_type = NM_MSG_REPORTS;
-		memcpy(msg->data, str, len);
-		free(str);
+		memcpy(msg->data, record_json_item->json_str, len);
 		w_len = sendto(conn_desc->udpsock, (void *)conn_desc->send_buf, conn_desc->send_len,
 						0, (struct sockaddr *)&conn_desc->udpaddr, sizeof(conn_desc->udpaddr));
+		printf("send record: %s\n", msg->data);
 		if(w_len<=0){
 			perror("socket write error:");
 			goto out;
 		}
-
 		memset(conn_desc->send_buf, 0, NM_SEND_BUF_LEN);
 	}
+
 out:
-#endif
-	printf("In vsecplat_report_stats\n");
+	clear_global_record_json_list();
 	thread_add_timer(master, vsecplat_report_stats, NULL, VSECPLAT_REPORT_INTERVAL);
 	return 0;
 }

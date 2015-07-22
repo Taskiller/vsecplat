@@ -9,18 +9,17 @@
 #include <netinet/in.h>
 #include <linux/un.h>
 #include <string.h>
+#include <arpa/inet.h>
 
 #include "thread.h"
 #include "msg_comm.h"
 
 static struct thread_master *master=NULL;
-
-int send_policy(int sock)
+static struct msg_head *msg=NULL;
+static int init_policy_buf()
 {
-	int ret=0;
-	int fd=0;
+	int fd;
 	int len;
-	struct msg_head *msg=NULL;
 
 	msg = malloc(2048);
 	if(NULL==msg){
@@ -38,13 +37,6 @@ int send_policy(int sock)
 	msg->len = len + sizeof(struct msg_head);
 	msg->msg_type = NM_MSG_RULES;
 
-	ret = write(sock, msg, msg->len);
-	if(ret<0){
-		perror("socket write error: ");	
-	}
-	
-	free(msg);
-	printf("In send_policy, msg len=%d, writelen=%d, policy=%s\n", msg->len, ret, msg->data);
 	return 0;
 }
 
@@ -56,35 +48,22 @@ int parse_report(struct msg_head *msg)
 
 #define BUF_LEN 1024*64
 static char readbuf[BUF_LEN];
-static int readlen=0;
-static int readofs=0;
-static int send_sock=0;
-
-int msg_deal(struct thread *thread)
+int deal_stats(struct thread *thread)
 {
 	int sock = THREAD_FD(thread);
 	int len=0;
 	struct msg_head *msg=NULL;
 
-	printf("In msg_deal, readofs=%d\n", readofs);
+	printf("In deal_stats\n");
 
-	len = read(sock, (void *)(readbuf+readofs), 4096);
+	len = recvfrom(sock, (void *)(readbuf), 4096, 0, NULL, NULL);
 	if(len<=0){
 		perror("read error:");
 		return 0;
 	}
 
-	readofs += len;
 	msg = (struct msg_head *)readbuf;
-	readlen = msg->len;
-
-	printf("readofs=%d, readlen=%d\n", readofs, readlen);
-
-	if(readofs<readlen){
-		goto out;
-	}
-
-	printf("readofs %d, get msg len %d, msg_type %d\n", readofs, msg->len, msg->msg_type);
+	printf("get msg len %d, msg_type %d\n", msg->len, msg->msg_type);
 
 	// if send complete
 	switch(msg->msg_type){
@@ -96,20 +75,8 @@ int msg_deal(struct thread *thread)
 	}
 	
 	memset(readbuf, 0, BUF_LEN);
-	readlen = 0;
-	readofs = 0;
-out:
-	thread_add_read(thread->master, msg_deal, NULL, sock);
-	return 0;
-}
 
-int send_msg(struct thread *thread)
-
-{
-	send_policy(send_sock);
-
-	thread_add_timer(thread->master, send_msg, NULL, 5);
-
+	thread_add_read(thread->master, deal_stats, NULL, sock);
 	return 0;
 }
 
@@ -148,10 +115,12 @@ int msg_timer_func(struct thread *thread)
 			break;
 
 		case CONNECT_OK:
-			send_policy(conn_sock);
-			close(conn_sock);
-			conn_sock=0;
-			conn_status = CONNECTING_SERV;
+			ret = write(conn_sock, msg, msg->len);
+			if(ret<0){
+				perror("socket write error: ");	
+			}
+			printf("send policy, msg len=%d, writelen=%d, policy=%s\n", msg->len, ret, msg->data);
+	
 			break;
 
 		default:
@@ -162,10 +131,14 @@ out:
 	return 0;
 }
 
-
 int main(void)
 {
+	int sock=0;
+	struct sockaddr_in serv;
 	struct thread thread;
+
+	init_policy_buf();
+
 	master = thread_master_create();
 	if(NULL==master){
 		//TODO
@@ -173,6 +146,23 @@ int main(void)
 	}
 
 	memset(readbuf, 0, 4096);
+
+	// create recv thread
+	sock = socket(AF_INET, SOCK_DGRAM, 0);
+	if(sock<0){
+		printf("Failed to create recv socket.\n");
+		return -1;
+	}
+	memset(&serv, 0, sizeof(struct sockaddr_in));
+	serv.sin_family = AF_INET;
+	serv.sin_addr.s_addr = htonl(INADDR_ANY);
+	serv.sin_port = htons(8001);
+
+	if(bind(sock, (struct sockaddr *)&serv, sizeof(struct sockaddr_in))){
+		printf("Failed to bind.\n");
+		return -1;
+	}
+	thread_add_read(master, deal_stats, NULL, sock);	
 
 	thread_add_timer(master, msg_timer_func, NULL, 5);
 

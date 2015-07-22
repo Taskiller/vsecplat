@@ -23,9 +23,25 @@ struct record_bucket{
 	struct nm_mutex mutex;
 };
 
+struct record_json_item{
+	struct list_head list;
+	struct rte_json *root;
+	struct rte_json *array;
+	char *json_str;
+};
+
+enum{
+	JSON_WITHOUT_FORMAT,
+	JSON_WITH_FORMAT,
+};
+
 int vsecplat_init_record_bucket(void);
 int vsecplat_record_pkt(struct nm_skb *skb);
 int vsecplat_test_record(void);
+int vsecplat_persist_record(void);
+int clear_global_record_json_list(void);
+
+extern struct list_head global_record_json_list;
 
 #define LIST_FIND(head, cmpfn, type, args...) 	\
 		({ 										\
@@ -37,7 +53,5 @@ int vsecplat_test_record(void);
 		 }										\
 		 (type)__j;								\
 		 })
-
-char *persist_record(void);
 
 #endif

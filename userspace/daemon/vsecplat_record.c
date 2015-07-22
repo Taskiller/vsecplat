@@ -6,12 +6,25 @@
 
 static struct record_bucket *record_bucket_hash=NULL;
 
-enum{
-	JSON_WITHOUT_FORMAT,
-	JSON_WITH_FORMAT,
-};
-
 #define VSECPLAT_RECORD_HASH_SIZE (1<<10)
+
+struct list_head global_record_json_list;
+
+int clear_global_record_json_list(void)
+{
+	struct list_head *pos=NULL, *tmp=NULL;
+	struct record_json_item *item=NULL;
+	list_for_each_safe(pos, tmp, &global_record_json_list){
+		item = list_entry(pos, struct record_json_item, list);	
+		list_del(&item->list);
+		rte_destroy_json(item->root);
+		if(item->json_str){
+			free(item->json_str);
+		}
+		free(item);
+	}
+	return 0;
+}
 
 int vsecplat_init_record_bucket(void)
 {
@@ -29,6 +42,9 @@ int vsecplat_init_record_bucket(void)
 		INIT_LIST_HEAD(&bucket->list);
 		nm_mutex_init(&bucket->mutex);
 	}
+
+	INIT_LIST_HEAD(&global_record_json_list);
+
 	return 0;
 }
 
@@ -193,28 +209,49 @@ static struct rte_json *record_entry_to_json(struct record_entry *entry)
 }
 
 #define MAX_REPORT_ITEM 64
-char *persist_record(void)
+struct record_json_item *new_record_json_item(void)
 {
-	char *str;
+	struct record_json_item *record_json_item=NULL;
+	record_json_item = (struct record_json_item *)malloc(sizeof(struct record_json_item));
+	if(NULL==record_json_item){
+		return NULL;
+	}
+	memset(record_json_item, 0, sizeof(struct record_json_item));
+	INIT_LIST_HEAD(&record_json_item->list);	
+
+	record_json_item->root = new_json_item();
+	if(NULL==record_json_item->root){
+		free(record_json_item);
+		return NULL;
+	}
+	record_json_item->root->type = JSON_OBJECT;
+
+	record_json_item->array = new_json_item();
+	if(NULL==record_json_item->array){
+		free(record_json_item->root);
+		free(record_json_item);
+		return NULL;
+	}
+	record_json_item->array->type = JSON_ARRAY;
+
+	return record_json_item;
+}
+
+int vsecplat_persist_record(void)
+{
 	int idx=0;
 	int item_count=0;
-	struct rte_json *root=NULL, *array=NULL, *item=NULL;
+	struct rte_json *item=NULL;
 	struct list_head *pos=NULL, *tmp=NULL;
 	struct record_bucket *bucket=NULL;
 	struct record_entry *entry=NULL;
+	struct record_json_item *record_json_item=NULL;
 
-	root = new_json_item();
-	if(NULL==root){
-		return NULL;
+	record_json_item = new_record_json_item();
+	if(NULL==record_json_item){
+		nm_log("Failed to create record_json_item.\n");
+		return -1;
 	}
-	root->type = JSON_OBJECT;
-
-	array = new_json_item();
-	if(NULL==array){
-		goto out;
-	}
-	array->type = JSON_ARRAY;
-
 	for(idx=0;idx<VSECPLAT_RECORD_HASH_SIZE;idx++){
 		bucket = record_bucket_hash + idx;	
 		nm_mutex_lock(&bucket->mutex);
@@ -229,31 +266,36 @@ char *persist_record(void)
 				if(NULL==item){
 					nm_log("Failed to create json item.\n");
 					nm_mutex_unlock(&bucket->mutex);
+					rte_destroy_json(record_json_item->array);
+					free(record_json_item);
 					goto out;
 				}
-				rte_array_add_item(array, item);
+				rte_array_add_item(record_json_item->array, item);
 				item_count++;
 				if(item_count>=MAX_REPORT_ITEM){
-					nm_mutex_unlock(&bucket->mutex);
-					goto count_break;
+					item_count=0;
+					rte_object_add_item(record_json_item->root, "record_list", record_json_item->array);
+					list_add_tail(&global_record_json_list, &record_json_item->list);
+					record_json_item = new_record_json_item();
+					if(NULL==record_json_item){
+						nm_mutex_unlock(&bucket->mutex);
+						goto out;
+					}
 				}
 			}
 		}
 		nm_mutex_unlock(&bucket->mutex);
 	}
 
-count_break:
-	if(0==rte_array_get_size(array)){
-		goto out;
+	if(item_count>0){
+		rte_object_add_item(record_json_item->root, "record_list", record_json_item->array);
+		list_add_tail(&global_record_json_list, &record_json_item->list);
 	}
 
-	rte_object_add_item(root, "record_list", array);
-	str = rte_serialize_json(root, JSON_WITHOUT_FORMAT);
-
-	// printf("persist_record=%s\n", str);
+	return 0;
 out:
-	rte_destroy_json(root);
-	return str;
+	clear_global_record_json_list();
+	return -1;
 }
 
 int vsecplat_test_record(void)
@@ -263,8 +305,6 @@ int vsecplat_test_record(void)
 	struct record_bucket *bucket=NULL;
 	u32 hash=0;
 
-	// char *str=NULL;
-
 	memset(&entry, 0, sizeof(struct record_entry));
 	entry.sip = 0x10000a;
 	entry.dip = 0x20000b;
@@ -272,6 +312,7 @@ int vsecplat_test_record(void)
 	entry.sport = 2025;
 	entry.dport = 123;
 	entry.vlanid = 0;
+	entry.packetsize = 1251;
 
 	hash = record_hash(&entry);
 	bucket = record_bucket_hash + hash;
@@ -279,6 +320,7 @@ int vsecplat_test_record(void)
 	tmp = LIST_FIND(&bucket->list, test_record_match, struct record_entry *, &entry);
 	if(NULL!=tmp){
 		tmp->count++;
+		tmp->packetsize += entry.packetsize;
 	}else{
 		tmp = (struct record_entry *)malloc(sizeof(struct record_entry));
 		if(NULL==tmp){
@@ -289,6 +331,7 @@ int vsecplat_test_record(void)
 		memcpy(tmp, &entry, sizeof(struct record_entry));
 		INIT_LIST_HEAD(&tmp->list);
 		tmp->count++;
+		tmp->packetsize += entry.packetsize;
 		list_add_tail(&bucket->list, &tmp->list);
 	}
 	nm_mutex_unlock(&bucket->mutex);
@@ -299,6 +342,7 @@ int vsecplat_test_record(void)
 	tmp = LIST_FIND(&bucket->list, test_record_match, struct record_entry *, &entry);
 	if(NULL!=tmp){
 		tmp->count++;
+		tmp->packetsize += entry.packetsize;
 	}else{
 		tmp = (struct record_entry *)malloc(sizeof(struct record_entry));
 		if(NULL==tmp){
@@ -309,15 +353,11 @@ int vsecplat_test_record(void)
 		memcpy(tmp, &entry, sizeof(struct record_entry));
 		INIT_LIST_HEAD(&tmp->list);
 		tmp->count++;
+		tmp->packetsize += entry.packetsize;
 		list_add_tail(&bucket->list, &tmp->list);
 	}
 	nm_mutex_unlock(&bucket->mutex);
 
-#if 0
-	str = persist_record();
-
-	printf("%s", str);
-#endif
 	return 0;
 }
 
