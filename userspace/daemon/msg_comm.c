@@ -25,33 +25,32 @@ int init_conn_desc(void)
 	}
 	memset(conn_desc, 0, sizeof(struct conn_desc));
 
-	conn_desc->recv_buf = (char *)malloc(NM_RECV_BUF_LEN);
-	if(NULL==conn_desc->recv_buf){
+	conn_desc->policy_buf = (char *)malloc(NM_RECV_BUF_LEN);
+	if(NULL==conn_desc->policy_buf){
 		printf("Failed to alloc receive buffer.\n");
 		goto out;
 	}
-	memset(conn_desc->recv_buf, 0, NM_RECV_BUF_LEN*sizeof(char));
+	memset(conn_desc->policy_buf, 0, NM_RECV_BUF_LEN*sizeof(char));
 
-	conn_desc->send_buf = (char *)malloc(NM_SEND_BUF_LEN);
-	if(NULL==conn_desc->send_buf){
+	conn_desc->report_buf = (char *)malloc(NM_SEND_BUF_LEN);
+	if(NULL==conn_desc->report_buf){
 		printf("Failed to alloc send buffer.\n");
 		goto out;
 	}
-	memset(conn_desc->send_buf, 0, NM_SEND_BUF_LEN*sizeof(char));
+	memset(conn_desc->report_buf, 0, NM_SEND_BUF_LEN*sizeof(char));
 
 	conn_desc->status = VSECPLAT_WAIT_CONNECTING;
-	conn_desc->timeout = 5;
 
-	conn_desc->udpsock = socket(AF_INET, SOCK_DGRAM, 0);
-	if(conn_desc->udpsock<0){
+	conn_desc->report_sock = socket(AF_INET, SOCK_DGRAM, 0);
+	if(conn_desc->report_sock<0){
 		printf("Failed to create udp socket.\n");
 		goto out;
 	}
 
-	memset(&conn_desc->udpaddr, 0, sizeof(struct sockaddr_in));
-	conn_desc->udpaddr.sin_family = AF_INET;
-	conn_desc->udpaddr.sin_addr.s_addr = inet_addr(global_vsecplat_config->serv_cfg->ipaddr);
-	conn_desc->udpaddr.sin_port = htons(global_vsecplat_config->serv_cfg->udpport);
+	memset(&conn_desc->serv_addr, 0, sizeof(struct sockaddr_in));
+	conn_desc->serv_addr.sin_family = AF_INET;
+	conn_desc->serv_addr.sin_addr.s_addr = inet_addr(global_vsecplat_config->serv_cfg->ipaddr);
+	conn_desc->serv_addr.sin_port = htons(global_vsecplat_config->serv_cfg->udpport);
 
 	return 0;
 out:
@@ -96,23 +95,23 @@ int create_listen_socket(void)
 
 void clean_conn_desc(void)
 {
-	char *recv_buf=NULL;
+	char *policy_buf=NULL;
 
 	if(NULL==conn_desc){
 		return;
 	}
 
-	if(conn_desc->recv_buf){
-		recv_buf = conn_desc->recv_buf;
-		memset(recv_buf, 0, NM_RECV_BUF_LEN*sizeof(char));
+	if(conn_desc->policy_buf){
+		policy_buf = conn_desc->policy_buf;
+		memset(policy_buf, 0, NM_RECV_BUF_LEN*sizeof(char));
 	}
 
-	if(conn_desc->send_buf){
-		free(conn_desc->send_buf);
+	if(conn_desc->report_buf){
+		free(conn_desc->report_buf);
 	}
 
 	memset(conn_desc, 0, sizeof(struct conn_desc));
-	conn_desc->recv_buf = recv_buf;
+	conn_desc->policy_buf = policy_buf;
 	conn_desc->status = VSECPLAT_WAIT_CONNECTING;
 
 	return;
@@ -123,13 +122,13 @@ int vsecplat_report_stats(struct thread *thread)
 {
 	int ret=0;
 	int len=0, w_len=0;
-	struct msg_head *msg=(struct msg_head *)conn_desc->send_buf;
+	struct msg_head *msg=(struct msg_head *)conn_desc->report_buf;
 	struct list_head *pos=NULL, *tmp=NULL;
 	struct record_json_item *record_json_item=NULL;
 
 	printf("In vsecplat_report_stats\n");
 
-	memset(conn_desc->send_buf, 0, NM_SEND_BUF_LEN);
+	memset(conn_desc->report_buf, 0, NM_SEND_BUF_LEN);
 	ret= vsecplat_persist_record();
 	if(ret<0){
 		nm_log("vsecplat_persist_record return %d.\n", ret);
@@ -147,14 +146,15 @@ int vsecplat_report_stats(struct thread *thread)
 		msg->len = len + sizeof(struct msg_head);
 		msg->msg_type = NM_MSG_REPORTS;
 		memcpy(msg->data, record_json_item->json_str, len);
-		w_len = sendto(conn_desc->udpsock, (void *)conn_desc->send_buf, conn_desc->send_len,
-						0, (struct sockaddr *)&conn_desc->udpaddr, sizeof(conn_desc->udpaddr));
-		printf("send record: %s\n", msg->data);
+		w_len = sendto(conn_desc->report_sock, (void *)conn_desc->report_buf, conn_desc->send_len,
+						0, (struct sockaddr *)&conn_desc->serv_addr, sizeof(conn_desc->serv_addr));
+		// printf("send record: %s\n", msg->data);
+		printf("send record: msg->len=%d, send_lend=%d\n", msg->len, w_len);
 		if(w_len<=0){
 			perror("socket write error:");
 			goto out;
 		}
-		memset(conn_desc->send_buf, 0, NM_SEND_BUF_LEN);
+		memset(conn_desc->report_buf, 0, NM_SEND_BUF_LEN);
 	}
 
 out:
@@ -168,17 +168,19 @@ int vsecplat_deal_policy(struct thread *thread)
 	int accept_sock = THREAD_FD(thread);
 	int readlen=0;	
 	struct msg_head *msg=NULL;
+	int result=0, ret=0;
+	int resp_len=0;
 
 	printf("In vsecplat_deal_policy, sock=%d.\n", accept_sock);
 
 #if 1
-	readlen = read(accept_sock, conn_desc->recv_buf+conn_desc->recv_ofs, 2048);
+	readlen = read(accept_sock, (conn_desc->policy_buf+conn_desc->recv_ofs), 4096);
 	if(readlen<=0){ // sock is close or error
 		clean_conn_desc();
 		return -1;
 	}
 	
-	msg = (struct msg_head *)conn_desc->recv_buf;
+	msg = (struct msg_head *)conn_desc->policy_buf;
 	conn_desc->recv_len = msg->len;
 	conn_desc->recv_ofs += readlen;
 
@@ -189,22 +191,31 @@ int vsecplat_deal_policy(struct thread *thread)
 	
 	printf("vsecplat_deal_policy readlen=%d, msg len=%d type=%d policy:%s\n", readlen, msg->len, msg->msg_type, msg->data);
 
-	switch(msg->msg_type){
-		case NM_MSG_RULES:
-			vsecplat_parse_policy(msg->data);		
-			break;
-		case NM_MSG_REPORTS:
-			break;
-		default:
-			break;
+	if(msg->msg_type!=NM_MSG_RULES){
+		goto out;
 	}
 
-	memset(conn_desc->recv_buf, 0, conn_desc->recv_len);
+	result = vsecplat_parse_policy(msg->data);		
+	memset(msg->data, 0, conn_desc->recv_len);
+	resp_len = create_policy_response(msg->data, result, 0);
+	if(resp_len<=0){
+		goto out;
+	}
+	msg->len = resp_len;	
+	ret = write(accept_sock, msg, msg->len);		
+	if(ret<0){
+		//TODO
+	}
+
+	memset(conn_desc->policy_buf, 0, conn_desc->recv_len);
 	conn_desc->recv_len = 0;
 	conn_desc->recv_ofs = 0;
-	close(accept_sock);
 
+#if 0  // Need to close?
+	close(accept_sock);
 	return 0;
+#endif
+
 out:
 #endif
 

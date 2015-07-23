@@ -11,19 +11,17 @@ enum{
 };
 
 struct conn_desc{
-	// int tcpsock;
-	int udpsock;
-	struct sockaddr_in udpaddr;
-	int timeout;
+	int report_sock;
+	struct sockaddr_in serv_addr;
 	int status;	
 	
 	int recv_len;
-	int send_len;
 	int recv_ofs;
+	int send_len;
 	int send_ofs;
 	
-	char *recv_buf;
-	char *send_buf;
+	char *policy_buf;
+	char *report_buf;
 };
 
 enum{
@@ -37,7 +35,6 @@ struct msg_head{
 	char data[0];
 }__attribute__((packed));
 
-#define VSECPLAT_REPORT_INTERVAL 6 // 每隔60秒报告一次统计信息
 
 int init_conn_desc(void);
 int create_listen_socket(void);

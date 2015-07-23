@@ -5,5 +5,6 @@
 		{"name":"eth1"},
 		{"name":"eth2"}
 	],
-	"outport_list":[{"name":"eth3"}]
+	"outport_list":[{"name":"eth3"}],
+	"time_interval":60
 }

@@ -80,6 +80,8 @@ int parse_vsecplat_config(void)
 		return -1;
 	}
 	memset(global_vsecplat_config, 0, sizeof(struct vsecplat_config));
+	global_vsecplat_config->time_interval = VSECPLAT_REPORT_INTERVAL;
+
 	json = rte_parse_json(file_buf);
 	if(NULL==json){
 		free(file_buf);
@@ -220,6 +222,11 @@ int parse_vsecplat_config(void)
 			global_vsecplat_config->outport_desc_array[idx].change_dst_mac = 1;
 		#endif
 		}
+	}
+
+	item = rte_object_get_item(json, "time_interval");
+	if(NULL!=item){
+		global_vsecplat_config->time_interval = item->u.val_int;	
 	}
 
 	rte_destroy_json(json);

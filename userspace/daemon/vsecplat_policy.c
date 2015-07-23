@@ -2,6 +2,7 @@
 #include "rte_json.h"
 #include "nm_type.h"
 #include "nm_skb.h"
+#include "nm_log.h"
 #include  "vsecplat_policy.h"
 
 static inline int bad_ip_address(char *str)
@@ -81,6 +82,23 @@ static void masklen2ip(int masklen, struct in_addr *netmask)
   return;
 }
 
+/*
+ * return:
+ * -1 for error
+ *  0 for normal format
+ *  1 for not format
+ * */
+static int get_num_obj_from_str(struct num_obj *obj, const char *str)
+{
+	return 0;
+}
+
+/*
+ * return:
+ * -1 for error
+ *  0 for normal format
+ *  1 for not format
+ * */
 static int get_addr_obj_from_str(struct addr_obj *obj, const char *str)
 {
 	char *pos=NULL;
@@ -89,7 +107,7 @@ static int get_addr_obj_from_str(struct addr_obj *obj, const char *str)
 	struct in_addr addr;
 
 	if(NULL!=(pos=strchr(str, '/'))){ // XX.XX.XX.XX/N
-		obj->type = IP_NET;
+		obj->type = IP_NET_MASK;
 		len = pos-str;
 		cp = malloc(len+1);
 		if(NULL==cp){
@@ -142,7 +160,7 @@ static int get_addr_obj_from_str(struct addr_obj *obj, const char *str)
 			if(NULL==pos){
 				pos=strchr(tmp, '\0');
 			}
-			if(idx>=16){
+			if(idx>=GROUP_ITEM_MAX_NUM){
 				//TODO
 				return -1;
 			}
@@ -161,6 +179,7 @@ static struct forward_rules *get_forward_rules(struct rte_json *json)
 	struct rule_entry *rule_entry=NULL;
 	struct rte_json *item=NULL, *entry=NULL, *tmp=NULL;
 	int rule_num=0, idx=0;
+	int not_flag=0;
 
 	item = rte_object_get_item(json, "forward_rules");
 	if(NULL==item){
@@ -176,7 +195,7 @@ static struct forward_rules *get_forward_rules(struct rte_json *json)
 	}
 	forward_rules = (struct forward_rules *)malloc(sizeof(struct forward_rules));
 	if(NULL==forward_rules){
-		// TODO
+		nm_log("Failed to alloc for forward_rules.\n");
 		goto out;
 	}
 	memset(forward_rules, 0, sizeof(struct forward_rules));	
@@ -184,6 +203,7 @@ static struct forward_rules *get_forward_rules(struct rte_json *json)
 	forward_rules->rule_num = rule_num;
 	forward_rules->rule_entry = (struct rule_entry *)malloc(rule_num*sizeof(struct rule_entry));
 	if(NULL==forward_rules->rule_entry){
+		nm_log("Failed to alloc forward_rules->rule_entry.\n");
 		goto out;
 	}
 	memset(forward_rules->rule_entry, 0, rule_num*sizeof(struct rule_entry));	
@@ -211,49 +231,70 @@ static struct forward_rules *get_forward_rules(struct rte_json *json)
 		if(tmp->type != JSON_STRING){
 			goto out;
 		}
-		get_addr_obj_from_str(&(rule_entry->sip), tmp->u.val_str);	
+		not_flag=get_addr_obj_from_str(&(rule_entry->sip), tmp->u.val_str);	
+		if(not_flag>0){
+			rule_entry->rule_not_flag |= RULE_NOT_SIP;
+		}
 
 		tmp = rte_object_get_item(entry, "dip");
 		if(NULL==tmp){
 			continue;
 		}
-		get_addr_obj_from_str(&(rule_entry->dip), tmp->u.val_str);	
+		if(tmp->type != JSON_STRING){
+			goto out;
+		}
+		not_flag = get_addr_obj_from_str(&(rule_entry->dip), tmp->u.val_str);	
+		if(not_flag>0){
+			rule_entry->rule_not_flag |= RULE_NOT_DIP;
+		}
 
 		tmp = rte_object_get_item(entry, "sport");
 		if(NULL==tmp){
 			continue;
 		}
-		if(tmp->type != JSON_INTEGER){
+		if(tmp->type != JSON_STRING){
 			goto out;
 		}
-		rule_entry->sport = tmp->u.val_int;
+		not_flag = get_num_obj_from_str(&(rule_entry->sport), tmp->u.val_str);
+		if(not_flag>0){
+			rule_entry->rule_not_flag |= RULE_NOT_SPORT;
+		}
 
 		tmp = rte_object_get_item(entry, "dport");
 		if(NULL==tmp){
 			continue;
 		}
-		if(tmp->type != JSON_INTEGER){
+		if(tmp->type != JSON_STRING){
 			goto out;
 		}
-		rule_entry->dport = tmp->u.val_int;
+		not_flag = get_num_obj_from_str(&(rule_entry->dport), tmp->u.val_str);
+		if(not_flag>0){
+			rule_entry->rule_not_flag |= RULE_NOT_DPORT;
+		}
 
 		tmp = rte_object_get_item(entry, "proto");
 		if(NULL==tmp){
 			continue;
 		}
-		if(tmp->type != JSON_INTEGER){
+		if(tmp->type != JSON_STRING){
 			goto out;
 		}
-		rule_entry->proto = tmp->u.val_int;
+		not_flag = get_num_obj_from_str(&(rule_entry->proto), tmp->u.val_str);
+		if(not_flag>0){
+			rule_entry->rule_not_flag |= RULE_NOT_PROTO;
+		}
 
 		tmp = rte_object_get_item(entry, "vlanid");
 		if(NULL==tmp){
 			continue;
 		}
-		if(tmp->type != JSON_INTEGER){
+		if(tmp->type != JSON_STRING){
 			goto out;
 		}
-		rule_entry->vlanid = tmp->u.val_int;
+		not_flag = get_num_obj_from_str(&(rule_entry->vlanid), tmp->u.val_str);
+		if(not_flag>0){
+			rule_entry->rule_not_flag |= RULE_NOT_VLANID;
+		}
 
 		tmp = rte_object_get_item(entry, "forward");
 		if(NULL==tmp){
@@ -274,24 +315,43 @@ out:
 	return NULL;
 }
 
-static struct forward_rules_head *fw_policy_list=NULL;
-
-static int vsecplat_add_policy(struct forward_rules *forward_rules)
+/*
+ * return:
+ * 0  : success
+ * -1 : failure 
+ * */
+int create_policy_response(char *buf, int result, int report_state)
 {
-	int rule_idx=0;
-	struct rule_entry *rule_entry=NULL;
-	nm_mutex_lock(&fw_policy_list->mutex);	
-	// Maybe need check first
+	struct rte_json *root=NULL;
+	struct rte_json *item=NULL;
+	root = new_json_item();
+	if(NULL==root){
+		return -1;
+	}
+	root->type = JSON_OBJECT;
 
-	for(rule_idx=0; rule_idx<forward_rules->rule_num; rule_idx++){
-		rule_entry = forward_rules->rule_entry+rule_idx;
-		INIT_LIST_HEAD(&rule_entry->list);
-		list_add_tail(&rule_entry->list, &fw_policy_list->list);
-	}	
-	nm_mutex_unlock(&fw_policy_list->mutex);	
+	item = new_json_item();
+	if(NULL==item){
+		rte_destroy_json(root);
+		return -1;
+	}
+	item->type = JSON_INTEGER;
+	item->u.val_int = result;
+	rte_object_add_item(root, "result", item);
+
+	item = new_json_item();
+	if(NULL==item){
+		rte_destroy_json(root);
+		return -1;
+	}
+	item->type = JSON_INTEGER;
+	item->u.val_int = report_state;
+	rte_object_add_item(root, "report_state", item);
+
 	return 0;
 }
 
+static struct forward_rules_head *fw_policy_list=NULL;
 static int vsecplat_del_policy(struct forward_rules *forward_rules)
 {
 	struct list_head *pos=NULL, *n=NULL;
@@ -312,6 +372,24 @@ static int vsecplat_del_policy(struct forward_rules *forward_rules)
 	nm_mutex_unlock(&fw_policy_list->mutex);
 	free(forward_rules->rule_entry);
 
+	return 0;
+}
+
+static int vsecplat_add_policy(struct forward_rules *forward_rules)
+{
+	int rule_idx=0;
+	struct rule_entry *rule_entry=NULL;
+
+	// First, delete the rule with the same id
+	vsecplat_del_policy(forward_rules);
+
+	nm_mutex_lock(&fw_policy_list->mutex);	
+	for(rule_idx=0; rule_idx<forward_rules->rule_num; rule_idx++){
+		rule_entry = forward_rules->rule_entry+rule_idx;
+		INIT_LIST_HEAD(&rule_entry->list);
+		list_add_tail(&rule_entry->list, &fw_policy_list->list);
+	}	
+	nm_mutex_unlock(&fw_policy_list->mutex);	
 	return 0;
 }
 
@@ -375,7 +453,7 @@ static int test_match_addr_obj(struct addr_obj *addr_obj, const u32 ip)
 				return 1;
 			}
 			break;
-		case IP_NET:
+		case IP_NET_MASK:
 			if((addr_obj->u.net.mask & addr_obj->u.net.length)==(ip&addr_obj->u.net.length)){
 				return 1;
 			}
@@ -386,7 +464,7 @@ static int test_match_addr_obj(struct addr_obj *addr_obj, const u32 ip)
 			}
 			break;
 		case IP_GROUP:
-			for(i=0;i<16;i++){
+			for(i=0;i<GROUP_ITEM_MAX_NUM;i++){
 				if(ip==addr_obj->u.group.ip_addrs[i]){
 					return 1;
 				}
@@ -395,6 +473,11 @@ static int test_match_addr_obj(struct addr_obj *addr_obj, const u32 ip)
 		default:
 			break;
 	}
+	return 0;
+}
+
+static int test_match_num_obj(struct num_obj *num_obj, const u32 num)
+{
 	return 0;
 }
 
@@ -425,27 +508,37 @@ int get_forward_policy(struct nm_skb *skb)
 	nm_mutex_lock(&fw_policy_list->mutex);	
 	list_for_each(pos, &fw_policy_list->list){
 		rule_entry = list_entry(pos, struct rule_entry, list);
-		if(!test_match_addr_obj(&rule_entry->sip, saddr)){
+		if((rule_entry->rule_not_flag & RULE_NOT_SIP) ^ test_match_addr_obj(&rule_entry->sip, saddr)){
 			goto not_match;
 		}
-		if(!test_match_addr_obj(&rule_entry->dip, daddr)){
+		if((rule_entry->rule_not_flag & RULE_NOT_DIP) ^ test_match_addr_obj(&rule_entry->dip, daddr)){
 			goto not_match;
 		}
-		if((rule_entry->sport!=0)&&(rule_entry->sport!=sport)){
+
+		if((rule_entry->rule_not_flag & RULE_NOT_SPORT) ^ test_match_num_obj(&rule_entry->sport, sport)){
 			goto not_match;
 		}
-		if((rule_entry->dport!=0)&&(rule_entry->dport!=dport)){
+
+		if((rule_entry->rule_not_flag & RULE_NOT_DPORT) ^ test_match_num_obj(&rule_entry->dport, dport)){
 			goto not_match;
 		}
-		if((rule_entry->proto!=0)&&(rule_entry->proto!=proto)){
+
+		if((rule_entry->rule_not_flag & RULE_NOT_PROTO) ^ test_match_num_obj(&rule_entry->proto, proto)){
 			goto not_match;
 		}
-		if((rule_entry->vlanid!=0)&&(rule_entry->vlanid!=vlanid)){
+
+		if((rule_entry->rule_not_flag & RULE_NOT_VLANID) ^ test_match_num_obj(&rule_entry->vlanid, vlanid)){
 			goto not_match;
 		}
 
 		// reach here, the packet match the policy
 		nm_mutex_unlock(&fw_policy_list->mutex);
+
+		// Need to conversion the DMAC
+		if((rule_entry->forward==NM_PKT_FORWARD)&&
+			(rule_entry->conversion)){
+			memcpy(skb->mac.raw, rule_entry->dst_mac, NM_MAC_LEN);
+		}
 		return rule_entry->forward;
 	}
 
@@ -475,7 +568,7 @@ int add_test_policy(void)
 	char *file_buf=NULL;
 
 	memset(&stat_buf, 0, sizeof(struct stat));
-	stat("/usr/local/add_rule.json", &stat_buf);
+	stat("./add_rule.json", &stat_buf);
 	len = stat_buf.st_size;
 	
 	file_buf = malloc(len);
@@ -483,7 +576,7 @@ int add_test_policy(void)
 		return -1;
 	}
 	memset(file_buf, 0, len);
-	fd = open("/usr/local/add_rule.json", O_RDONLY);
+	fd = open("./add_rule.json", O_RDONLY);
 	if(fd<0){
 		free(file_buf);
 		return -1;

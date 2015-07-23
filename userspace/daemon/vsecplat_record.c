@@ -98,10 +98,11 @@ int vsecplat_record_pkt(struct nm_skb *skb)
 			nm_mutex_unlock(&bucket->mutex);
 			return -1;
 		}
+		memset(tmp, 0, sizeof(struct record_entry));
 		memcpy(tmp, &entry, sizeof(struct record_entry));
 		INIT_LIST_HEAD(&tmp->list);
 		tmp->count++;
-		tmp->packetsize += skb->len;
+		tmp->packetsize = skb->len;
 		list_add_tail(&bucket->list, &tmp->list);
 	}
 	nm_mutex_unlock(&bucket->mutex);
@@ -221,15 +222,15 @@ struct record_json_item *new_record_json_item(void)
 
 	record_json_item->root = new_json_item();
 	if(NULL==record_json_item->root){
-		free(record_json_item);
+		rte_destroy_json(record_json_item->root);
 		return NULL;
 	}
 	record_json_item->root->type = JSON_OBJECT;
 
 	record_json_item->array = new_json_item();
 	if(NULL==record_json_item->array){
-		free(record_json_item->root);
-		free(record_json_item);
+		rte_destroy_json(record_json_item->root);
+		rte_destroy_json(record_json_item->array);
 		return NULL;
 	}
 	record_json_item->array->type = JSON_ARRAY;
@@ -271,6 +272,7 @@ int vsecplat_persist_record(void)
 					goto out;
 				}
 				rte_array_add_item(record_json_item->array, item);
+				entry->count=0;
 				item_count++;
 				if(item_count>=MAX_REPORT_ITEM){
 					item_count=0;
@@ -304,6 +306,7 @@ int vsecplat_test_record(void)
 	struct record_entry *tmp=NULL;
 	struct record_bucket *bucket=NULL;
 	u32 hash=0;
+	int i=0;
 
 	memset(&entry, 0, sizeof(struct record_entry));
 	entry.sip = 0x10000a;
@@ -314,50 +317,30 @@ int vsecplat_test_record(void)
 	entry.vlanid = 0;
 	entry.packetsize = 1251;
 
-	hash = record_hash(&entry);
-	bucket = record_bucket_hash + hash;
-	nm_mutex_lock(&bucket->mutex);
-	tmp = LIST_FIND(&bucket->list, test_record_match, struct record_entry *, &entry);
-	if(NULL!=tmp){
-		tmp->count++;
-		tmp->packetsize += entry.packetsize;
-	}else{
-		tmp = (struct record_entry *)malloc(sizeof(struct record_entry));
-		if(NULL==tmp){
-			//TODO
-			nm_mutex_unlock(&bucket->mutex);
-			return -1;
+	for(i=0;i<128;i++){
+		entry.sip++;
+		hash = record_hash(&entry);
+		bucket = record_bucket_hash + hash;
+		nm_mutex_lock(&bucket->mutex);
+		tmp = LIST_FIND(&bucket->list, test_record_match, struct record_entry *, &entry);
+		if(NULL!=tmp){
+			tmp->count++;
+			tmp->packetsize += entry.packetsize;
+		}else{
+			tmp = (struct record_entry *)malloc(sizeof(struct record_entry));
+			if(NULL==tmp){
+				//TODO
+				nm_mutex_unlock(&bucket->mutex);
+				return -1;
+			}
+			memcpy(tmp, &entry, sizeof(struct record_entry));
+			INIT_LIST_HEAD(&tmp->list);
+			tmp->count++;
+			tmp->packetsize = entry.packetsize;
+			list_add_tail(&bucket->list, &tmp->list);
 		}
-		memcpy(tmp, &entry, sizeof(struct record_entry));
-		INIT_LIST_HEAD(&tmp->list);
-		tmp->count++;
-		tmp->packetsize += entry.packetsize;
-		list_add_tail(&bucket->list, &tmp->list);
+		nm_mutex_unlock(&bucket->mutex);
 	}
-	nm_mutex_unlock(&bucket->mutex);
-
-	hash = record_hash(&entry);
-	bucket = record_bucket_hash + hash;
-	nm_mutex_lock(&bucket->mutex);
-	tmp = LIST_FIND(&bucket->list, test_record_match, struct record_entry *, &entry);
-	if(NULL!=tmp){
-		tmp->count++;
-		tmp->packetsize += entry.packetsize;
-	}else{
-		tmp = (struct record_entry *)malloc(sizeof(struct record_entry));
-		if(NULL==tmp){
-			//TODO
-			nm_mutex_unlock(&bucket->mutex);
-			return -1;
-		}
-		memcpy(tmp, &entry, sizeof(struct record_entry));
-		INIT_LIST_HEAD(&tmp->list);
-		tmp->count++;
-		tmp->packetsize += entry.packetsize;
-		list_add_tail(&bucket->list, &tmp->list);
-	}
-	nm_mutex_unlock(&bucket->mutex);
-
 	return 0;
 }
 

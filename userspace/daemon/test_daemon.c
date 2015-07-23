@@ -15,34 +15,35 @@
 #include "msg_comm.h"
 
 static struct thread_master *master=NULL;
-static struct msg_head *msg=NULL;
+static struct msg_head *policy_msg=NULL;
 static int init_policy_buf()
 {
 	int fd;
 	int len;
 
-	msg = malloc(2048);
-	if(NULL==msg){
+	policy_msg = malloc(2048);
+	if(NULL==policy_msg){
 		return -1;
 	}
-	memset(msg, 0, 2048);
+	memset(policy_msg, 0, 2048);
 	fd = open("./add_rule.json", O_RDONLY);
 	if(fd<0){
-		free(msg);
+		free(policy_msg);
+		policy_msg=NULL;
 		return -1;
 	}
-	len = read(fd, msg->data, 2048);
+	len = read(fd, policy_msg->data, 2048);
 	close(fd);
 	
-	msg->len = len + sizeof(struct msg_head);
-	msg->msg_type = NM_MSG_RULES;
+	policy_msg->len = len + sizeof(struct msg_head);
+	policy_msg->msg_type = NM_MSG_RULES;
 
 	return 0;
 }
 
-int parse_report(struct msg_head *msg)
+int parse_report(struct msg_head *report_msg)
 {
-	printf("report json=%s\n", msg->data);
+	// printf("report json=%s\n", report_msg->data);
 	return 0;
 }
 
@@ -52,23 +53,23 @@ int deal_stats(struct thread *thread)
 {
 	int sock = THREAD_FD(thread);
 	int len=0;
-	struct msg_head *msg=NULL;
+	struct msg_head *report_msg=NULL;
 
 	printf("In deal_stats\n");
 
-	len = recvfrom(sock, (void *)(readbuf), 4096, 0, NULL, NULL);
-	if(len<=0){
-		perror("read error:");
+	len = recvfrom(sock, (void *)(readbuf), BUF_LEN, 0, NULL, NULL);
+	if(len<0){
+		printf("Failed to recv from socket.\n");
 		return 0;
 	}
 
-	msg = (struct msg_head *)readbuf;
-	printf("get msg len %d, msg_type %d\n", msg->len, msg->msg_type);
+	report_msg = (struct msg_head *)readbuf;
+	printf("get msg len %d, recv_len=%d, msg_type %d\n", report_msg->len, len, report_msg->msg_type);
 
 	// if send complete
-	switch(msg->msg_type){
+	switch(report_msg->msg_type){
 		case NM_MSG_REPORTS:
-			parse_report(msg);
+			parse_report(report_msg);
 			break;
 		default:
 			break;
@@ -115,11 +116,11 @@ int msg_timer_func(struct thread *thread)
 			break;
 
 		case CONNECT_OK:
-			ret = write(conn_sock, msg, msg->len);
+			ret = write(conn_sock, policy_msg, policy_msg->len);
 			if(ret<0){
 				perror("socket write error: ");	
 			}
-			printf("send policy, msg len=%d, writelen=%d, policy=%s\n", msg->len, ret, msg->data);
+			printf("send policy, msg len=%d, writelen=%d, policy=%s\n", policy_msg->len, ret, policy_msg->data);
 	
 			break;
 
@@ -162,6 +163,7 @@ int main(void)
 		printf("Failed to bind.\n");
 		return -1;
 	}
+
 	thread_add_read(master, deal_stats, NULL, sock);	
 
 	thread_add_timer(master, msg_timer_func, NULL, 5);
