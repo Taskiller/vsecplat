@@ -139,6 +139,7 @@ int vsecplat_report_stats(struct thread *thread)
 		record_json_item = list_entry(pos, struct record_json_item, list);
 		record_json_item->json_str = rte_serialize_json(record_json_item->root, JSON_WITHOUT_FORMAT);
 		if(NULL==record_json_item->json_str){
+			nm_log("Failed to serialize record item.\n");
 			goto out;
 		}
 		len = strlen(record_json_item->json_str);
@@ -148,8 +149,8 @@ int vsecplat_report_stats(struct thread *thread)
 		memcpy(msg->data, record_json_item->json_str, len);
 		w_len = sendto(conn_desc->report_sock, (void *)conn_desc->report_buf, conn_desc->send_len,
 						0, (struct sockaddr *)&conn_desc->serv_addr, sizeof(conn_desc->serv_addr));
-		// printf("send record: %s\n", msg->data);
-		printf("send record: msg->len=%d, send_lend=%d\n", msg->len, w_len);
+		printf("send record: msg->len=%d, send_len=%d, data=%s\n\n", msg->len, w_len, msg->data);
+		// printf("send record: msg->len=%d, send_len=%d\n", msg->len, w_len);
 		if(w_len<=0){
 			perror("socket write error:");
 			goto out;

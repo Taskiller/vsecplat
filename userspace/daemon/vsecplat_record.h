@@ -1,5 +1,6 @@
 #ifndef __VSECPLAT_RECORD_H__
 #define __VSECPLAT_RECORD_H__
+#include <sys/time.h>
 #include "nm_type.h"
 #include "nm_list.h"
 #include "nm_skb.h"

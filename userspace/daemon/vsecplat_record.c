@@ -5,6 +5,7 @@
 #include "vsecplat_record.h"
 
 static struct record_bucket *record_bucket_hash=NULL;
+static time_t last_report_time;
 
 #define VSECPLAT_RECORD_HASH_SIZE (1<<10)
 
@@ -29,6 +30,7 @@ int clear_global_record_json_list(void)
 int vsecplat_init_record_bucket(void)
 {
 	int idx=0;
+	struct timeval report_time;
 	struct record_bucket *bucket=NULL;
 	record_bucket_hash = (struct record_bucket *)malloc(VSECPLAT_RECORD_HASH_SIZE * sizeof(struct record_bucket));
 
@@ -42,6 +44,9 @@ int vsecplat_init_record_bucket(void)
 		INIT_LIST_HEAD(&bucket->list);
 		nm_mutex_init(&bucket->mutex);
 	}
+
+	gettimeofday(&report_time, NULL);
+	last_report_time = report_time.tv_sec;
 
 	INIT_LIST_HEAD(&global_record_json_list);
 
@@ -103,7 +108,7 @@ int vsecplat_record_pkt(struct nm_skb *skb)
 		INIT_LIST_HEAD(&tmp->list);
 		tmp->count++;
 		tmp->packetsize = skb->len;
-		list_add_tail(&bucket->list, &tmp->list);
+		list_add_tail(&tmp->list, &bucket->list);
 	}
 	nm_mutex_unlock(&bucket->mutex);
 	return 0;
@@ -213,6 +218,11 @@ static struct rte_json *record_entry_to_json(struct record_entry *entry)
 struct record_json_item *new_record_json_item(void)
 {
 	struct record_json_item *record_json_item=NULL;
+	struct rte_json *item=NULL;
+	struct timeval cur_time;
+
+	gettimeofday(&cur_time, NULL);
+
 	record_json_item = (struct record_json_item *)malloc(sizeof(struct record_json_item));
 	if(NULL==record_json_item){
 		return NULL;
@@ -226,6 +236,24 @@ struct record_json_item *new_record_json_item(void)
 		return NULL;
 	}
 	record_json_item->root->type = JSON_OBJECT;
+
+	item = new_json_item();
+	if(NULL==item){
+		rte_destroy_json(record_json_item->root);
+		return NULL;
+	}
+	item->type = JSON_INTEGER;
+	item->u.val_int = last_report_time;
+	rte_object_add_item(record_json_item->root, "starttime", item);
+
+	item = new_json_item();
+	if(NULL==item){
+		rte_destroy_json(record_json_item->root);
+		return NULL;
+	}
+	item->type = JSON_INTEGER;
+	item->u.val_int = cur_time.tv_sec;
+	rte_object_add_item(record_json_item->root, "endtime", item);
 
 	record_json_item->array = new_json_item();
 	if(NULL==record_json_item->array){
@@ -248,11 +276,15 @@ int vsecplat_persist_record(void)
 	struct record_entry *entry=NULL;
 	struct record_json_item *record_json_item=NULL;
 
+	struct timeval report_time;
+
 	record_json_item = new_record_json_item();
 	if(NULL==record_json_item){
 		nm_log("Failed to create record_json_item.\n");
 		return -1;
 	}
+
+
 	for(idx=0;idx<VSECPLAT_RECORD_HASH_SIZE;idx++){
 		bucket = record_bucket_hash + idx;	
 		nm_mutex_lock(&bucket->mutex);
@@ -272,14 +304,15 @@ int vsecplat_persist_record(void)
 					goto out;
 				}
 				rte_array_add_item(record_json_item->array, item);
-				entry->count=0;
+				// entry->count=0;
 				item_count++;
 				if(item_count>=MAX_REPORT_ITEM){
 					item_count=0;
 					rte_object_add_item(record_json_item->root, "record_list", record_json_item->array);
-					list_add_tail(&global_record_json_list, &record_json_item->list);
+					list_add_tail(&record_json_item->list, &global_record_json_list);
 					record_json_item = new_record_json_item();
 					if(NULL==record_json_item){
+						nm_log("Failed to alloc record_json_item.\n");
 						nm_mutex_unlock(&bucket->mutex);
 						goto out;
 					}
@@ -291,8 +324,11 @@ int vsecplat_persist_record(void)
 
 	if(item_count>0){
 		rte_object_add_item(record_json_item->root, "record_list", record_json_item->array);
-		list_add_tail(&global_record_json_list, &record_json_item->list);
+		list_add_tail(&record_json_item->list, &global_record_json_list);
 	}
+
+	gettimeofday(&report_time, NULL);
+	last_report_time = report_time.tv_sec;
 
 	return 0;
 out:
@@ -319,6 +355,7 @@ int vsecplat_test_record(void)
 
 	for(i=0;i<128;i++){
 		entry.sip++;
+		entry.vlanid = i;
 		hash = record_hash(&entry);
 		bucket = record_bucket_hash + hash;
 		nm_mutex_lock(&bucket->mutex);
@@ -337,7 +374,7 @@ int vsecplat_test_record(void)
 			INIT_LIST_HEAD(&tmp->list);
 			tmp->count++;
 			tmp->packetsize = entry.packetsize;
-			list_add_tail(&bucket->list, &tmp->list);
+			list_add_tail(&tmp->list, &bucket->list);
 		}
 		nm_mutex_unlock(&bucket->mutex);
 	}
