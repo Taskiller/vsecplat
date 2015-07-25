@@ -682,8 +682,7 @@ int get_forward_policy(struct nm_skb *skb)
 		nm_mutex_unlock(&fw_policy_list->mutex);
 
 		// Need to conversion the DMAC
-		if((rule_entry->forward==NM_PKT_FORWARD)&&
-			(rule_entry->conversion)){
+		if((rule_entry->forward==NM_PKT_FORWARD)&&(rule_entry->conversion)){
 			memcpy(skb->mac.raw, rule_entry->dst_mac, NM_MAC_LEN);
 		}
 		return rule_entry->forward;
