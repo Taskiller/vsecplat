@@ -21,6 +21,7 @@ enum{
 };
 struct addr_obj{
 	int type;
+	u32 addr_mask;
 	union{
 		u32 host_ip;
 		struct{
@@ -39,14 +40,15 @@ struct addr_obj{
 
 enum{
 	NUM_NULL,
-	SINGLE_NUM,
-	RANGE_NUM,
-	GROUP_NUM,
+	NUM_SINGLE,
+	NUM_RANGE,
+	NUM_GROUP
 };
 struct num_obj{
 	int type;
+	u32 num_mask;
 	union{
-		u32 snum; // single number
+		u32 num; // single number
 		struct{   
 			u32 min;
 			u32 max;
@@ -85,7 +87,8 @@ struct forward_rules{
 
 enum{
 	NM_ADD_RULES=1,
-	NM_DEL_RULES
+	NM_DEL_RULES,
+	NM_CHECK_RULES  // Maybe no use
 };
 struct forward_rules_head{
 	struct list_head list;

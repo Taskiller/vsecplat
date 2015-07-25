@@ -1,45 +1,11 @@
 #include "rte_json.h"
+#include "nm_log.h"
 #include "vsecplat_config.h"
 
 // #define VSECPLATFORM_CFG_FILE "/mnt/config.json"
 #define VSECPLATFORM_CFG_FILE "./config.json"
 struct vsecplat_config *global_vsecplat_config;
 
-static int str_to_mac(const char *bufp, unsigned char *ptr)
-{
-	int i, j;
-	unsigned char val;
-	unsigned char c;
-
-	i = 0;
-	do {
-		j = val = 0;
-
-		/* We might get a semicolon here - not required. */
-		if (i && (*bufp == ':')) {
-			bufp++;
-		}
-
-		do {
-			c = *bufp;
-			if (((unsigned char)(c - '0')) <= 9) {
-				c -= '0';
-			} else if (((unsigned char)((c|0x20) - 'a')) <= 5) {
-				c = (c|0x20) - ('a'-10);
-			} else if (j && (c == ':' || c == 0)) {
-				break;
-			} else {
-				return -1;
-			}
-			++bufp;
-			val <<= 4;
-			val += c;
-		} while (++j < 2);
-		*ptr++ = val;
-	} while (++i < NM_MAC_LEN);
-
-	return *bufp; /* Error if we don't end at end of string. */
-}
 
 int parse_vsecplat_config(void)
 {
@@ -51,15 +17,18 @@ int parse_vsecplat_config(void)
 	struct rte_json *tmp=NULL;
 	int idx=0;
 
+	struct mgt_cfg *mgt_cfg=NULL;
+	struct serv_cfg *serv_cfg =NULL;
+
 	fd = open(VSECPLATFORM_CFG_FILE, O_RDONLY);
 	if(fd<0){
-		printf("Failed to open vsecplat config file.\n");
+		nm_log("Failed to open vsecplat config file.\n");
 		return -1;
 	}
 
 	memset(&stat_buf, 0, sizeof(struct stat));
 	if(fstat(fd, &stat_buf)<0){
-		printf("Failed to get file length.\n");
+		nm_log("Failed to get file length.\n");
 		close(fd);
 		return -1;
 	}
@@ -91,29 +60,30 @@ int parse_vsecplat_config(void)
 
 	item = rte_object_get_item(json, "mgt_cfg");	
 	if(NULL!=item){
-		struct mgt_cfg *mgt_cfg = (struct mgt_cfg *)malloc(sizeof(struct mgt_cfg));			
+		mgt_cfg = (struct mgt_cfg *)malloc(sizeof(struct mgt_cfg));
 		if(NULL==mgt_cfg){
-			// TODO
+			nm_log("Failed to alloc struct mgt_cfg.\n");
 			goto out;
 		}
 		memset(mgt_cfg, 0, sizeof(struct mgt_cfg));
 
 		tmp = rte_object_get_item(item, "name");
 		if(NULL==tmp){
-			// TODO
+			nm_log("Failed to get manage interface name.\n");
+			goto out;
 		}
 		strncpy(mgt_cfg->name, tmp->u.val_str, NM_NAME_LEN);
 
 		tmp = rte_object_get_item(item, "ipaddr");	
 		if(NULL==tmp){
-			// TODO
+			nm_log("Failed to get manage interface ipaddr.\n");
 			goto out;
 		}
 		strncpy(mgt_cfg->ipaddr, tmp->u.val_str, NM_ADDR_STR_LEN);
 
 		tmp = rte_object_get_item(item, "tcpport");
 		if(NULL==tmp){
-			printf("Failed to parse tcpport.\n");
+			nm_log("Failed to parse tcpport.\n");
 			goto out;
 		}
 		mgt_cfg->tcpport = tmp->u.val_int;
@@ -123,55 +93,54 @@ int parse_vsecplat_config(void)
 
 	item = rte_object_get_item(json, "serv_cfg");
 	if(NULL!=item){
-		struct serv_cfg *serv_cfg = (struct serv_cfg *)malloc(sizeof(struct serv_cfg));	
+		serv_cfg = (struct serv_cfg *)malloc(sizeof(struct serv_cfg));
 		if(NULL==serv_cfg){
-			// TODO
+			nm_log("Failed to alloc struct serv_cfg.\n");
 			goto out;
 		}
 		memset(serv_cfg, 0, sizeof(struct serv_cfg));
 		tmp = rte_object_get_item(item, "ipaddr");
 		if(NULL==tmp){
-			// TODO
+			nm_log("Failed to get server ipaddr.\n");
 			goto out;
 		}
 		strncpy(serv_cfg->ipaddr, tmp->u.val_str, NM_ADDR_STR_LEN);
 
 		tmp = rte_object_get_item(item, "udpport");
 		if(NULL==tmp){
-			printf("Failed to parse udpport.\n");
+			nm_log("Failed to parse udpport.\n");
 			goto out;
 		}
 		serv_cfg->udpport = tmp->u.val_int;
-
 		global_vsecplat_config->serv_cfg = serv_cfg;
 	}
 
 	item = rte_object_get_item(json, "inport_list");
 	if(NULL!=item){
 		if(item->type != JSON_ARRAY){
-			//TODO
+			nm_log("Failed to get inport interface list.\n");
 			goto out;
 		}
 		global_vsecplat_config->inport_num = rte_array_get_size(item);
 		global_vsecplat_config->inport_desc_array = (struct inport_desc *)malloc(global_vsecplat_config->inport_num * sizeof(struct inport_desc));
 		if(NULL==global_vsecplat_config->inport_desc_array){
-			//TODO
+			nm_log("Failed to alloc inport desc array.\n");
 			goto out;
 		}
 		memset(global_vsecplat_config->inport_desc_array, 0, sizeof(struct inport_desc)*global_vsecplat_config->inport_num);
 		for(idx=0;idx<global_vsecplat_config->inport_num;idx++){
 			entry = rte_array_get_item(item, idx);
 			if(NULL==entry){
-				// TODO
+				nm_log("Failed to get inport item %d.\n", idx);
 				goto out;
 			}
 			tmp = rte_object_get_item(entry, "name");
 			if(NULL==tmp){
-				// TODO
+				nm_log("There's no name field in item %d.\n", idx);
 				goto out;
 			}
 			if(tmp->type!=JSON_STRING){
-				// TODO
+				nm_log("name field is valid in item %d.\n", idx);
 				goto out;
 			}
 			strncpy(global_vsecplat_config->inport_desc_array[idx].name, tmp->u.val_str, NM_NAME_LEN); 
@@ -181,46 +150,33 @@ int parse_vsecplat_config(void)
 	item = rte_object_get_item(json, "outport_list");
 	if(NULL!=item){
 		if(item->type != JSON_ARRAY){
-			// TODO
+			nm_log("Failed to get outport interface list.\n");
 			goto out;
 		}
 
 		global_vsecplat_config->outport_num = rte_array_get_size(item);
 		global_vsecplat_config->outport_desc_array = (struct outport_desc *)malloc(global_vsecplat_config->outport_num * sizeof(struct outport_desc));		
 		if(NULL==global_vsecplat_config->outport_desc_array){
-			// TODO
+			nm_log("Failed to alloc outport desc array.\n");
 			goto out;
 		}
 		memset(global_vsecplat_config->outport_desc_array, 0, sizeof(struct outport_desc)*global_vsecplat_config->outport_num);
 		for(idx=0;idx<global_vsecplat_config->outport_num;idx++){
 			entry = rte_array_get_item(item, idx);
 			if(NULL==entry){
-				// TODO
+				nm_log("Failed to get outport item %d.\n", idx);
 				goto out;
 			}		
 			tmp = rte_object_get_item(entry, "name");
 			if(NULL==tmp){
-				// TODO
+				nm_log("There's no name field in item %d.\n", idx);
 				goto out;
 			}
 			if(tmp->type != JSON_STRING){
-				// TODO
+				nm_log("name field is valid in item %d.\n", idx);
 				goto out;
 			}
 			strncpy(global_vsecplat_config->outport_desc_array[idx].name, tmp->u.val_str, NM_NAME_LEN); 
-
-		#if 0
-			tmp = rte_object_get_item(entry, "dst_mac");
-			if(NULL==tmp){
-				continue;
-			}
-			if(tmp->type != JSON_STRING){
-				// TODO
-				goto out;
-			}
-			str_to_mac(tmp->u.val_str, global_vsecplat_config->outport_desc_array[idx].dst_mac);	
-			global_vsecplat_config->outport_desc_array[idx].change_dst_mac = 1;
-		#endif
 		}
 	}
 
@@ -233,6 +189,21 @@ int parse_vsecplat_config(void)
 	return  0;
 
 out:
+	if(mgt_cfg){
+		free(mgt_cfg);
+	}
+	if(serv_cfg){
+		free(serv_cfg);
+	}
+	if(global_vsecplat_config->inport_desc_array){
+		free(global_vsecplat_config->inport_desc_array);
+	}
+
+	if(global_vsecplat_config->outport_desc_array){
+		free(global_vsecplat_config->outport_desc_array);
+	}
+	free(file_buf);
+	free(global_vsecplat_config);
 	rte_destroy_json(json);
 	return -1;
 }

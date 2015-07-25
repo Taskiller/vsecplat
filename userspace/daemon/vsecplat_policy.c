@@ -5,61 +5,98 @@
 #include "nm_log.h"
 #include  "vsecplat_policy.h"
 
+static inline int str_to_mac(const char *bufp, unsigned char *ptr)
+{
+	int i, j;
+	unsigned char val;
+	unsigned char c;
+
+	i = 0;
+	do {
+		j = val = 0;
+
+		/* We might get a semicolon here - not required. */
+		if (i && (*bufp == ':')) {
+			bufp++;
+		}
+
+		do {
+			c = *bufp;
+			if (((unsigned char)(c - '0')) <= 9) {
+				c -= '0';
+			} else if (((unsigned char)((c|0x20) - 'a')) <= 5) {
+				c = (c|0x20) - ('a'-10);
+			} else if (j && (c == ':' || c == 0)) {
+				break;
+			} else {
+				return -1;
+			}
+			++bufp;
+			val <<= 4;
+			val += c;
+		} while (++j < 2);
+		*ptr++ = val;
+	} while (++i < NM_MAC_LEN);
+
+	return *bufp; /* Error if we don't end at end of string. */
+}
+
 static inline int bad_ip_address(char *str)
 {
 	char *sp;
-  	int dots = 0, nums = 0;
-  	char buf[4];
+	char tmp;
+	int dots=0, nums=0;
 
-  	if (str == NULL)
+	if(str==NULL){
     	return -2;
-
-  	for (;;)
-    {  
-    	memset (buf, 0, sizeof (buf));
-      	sp = str;
-      	while (*str != '\0'){
-	  		if (*str == '.'){
-	      		if (dots >= 3)
+	}
+	for(;;){
+		sp = str;
+		while(*str!='\0'){
+			if(*str=='.'){
+				if(dots>=3){
 					return -1;
-
-	    	  	if (*(str + 1) == '.')
+				}
+				if(*(str+1)=='.'){
 					return -1;
-
-	      		if (*(str + 1) == '\0')
+				}
+				if(*(str+1)=='\0'){
 					return -2;
-
-	      		dots++;
-	    		break;
-	    	}
-	  		if (!isdigit ((int) *str))
-	    		return -1;
-
+				}
+				dots++;
+				break;
+			}
+			if(!isdigit((int)*str)){
+				return -1;
+			}
 			str++;
 		}
-
-      	if (str - sp > 3)
+		if(str-sp>3){
 			return -1;
-
-      	strncpy (buf, sp, str - sp);
-      	if (atoi (buf) > 255)
+		}
+		tmp = *str;
+		*str = '\0';
+		if(atoi(sp)>255){
 			return -1;
-
-      	nums++;
-      	if (*str == '\0')
+		}
+		*str=tmp;
+		nums++;
+		if(*str=='\0'){
 			break;
+		}
+		str++;
+	}
 
-      str++;
-    }
+	if(nums<4){
+		return -1;
+	}
 
-  	if (nums < 4)
-    	return -1;
-
-  	return 1;
+	return 0;
 }
 
 static unsigned char maskbit[] = {0x00, 0x80, 0xc0, 0xe0, 0xf0,  0xf8, 0xfc, 0xfe, 0xff};
-static void masklen2ip(int masklen, struct in_addr *netmask)
+
+static inline void masklen2ip(int masklen, struct in_addr *netmask)
 {
 	u8 *pnt;
 	int bit;
@@ -88,9 +125,45 @@ static void masklen2ip(int masklen, struct in_addr *netmask)
  *  0 for normal format
  *  1 for not format
  * */
-static int get_num_obj_from_str(struct num_obj *obj, const char *str)
+static int get_num_obj_from_str(struct num_obj *obj, char *str)
 {
-	return 0;
+	char *pos=NULL, *end=NULL, *orig=NULL;
+	int val=0, idx=0;
+	int ret=0;
+	if(str[0]=='!'){
+		ret=1;
+		str = str + 1;
+	}
+	pos = orig = str;
+	end = str+strlen(str)+1;
+	while(pos<end){
+		if(*pos=='-'){ // range
+			obj->type = NUM_RANGE;
+			*pos='\0';
+			obj->u.range.min = atoi(str);
+			pos++;
+			obj->u.range.max = atoi(pos);
+			break;
+		}else if(*pos=='|'){
+			obj->type = NUM_GROUP;
+			*pos='\0';
+			val = atoi(orig);
+			obj->u.group.num[idx] = val;
+			obj->num_mask |= val;
+			idx++;
+			orig = pos + 1;
+		}else if(*pos=='\0'){
+			if(!obj->type){
+				obj->type = NUM_SINGLE;
+			}
+			val = atoi(orig);
+			obj->u.group.num[idx] = val; // when type is NUM_SIGNLE, it's also ok
+			obj->num_mask |= val;
+		}
+		pos++;
+	}
+
+	return ret;
 }
 
 /*
@@ -99,78 +172,81 @@ static int get_num_obj_from_str(struct num_obj *obj, const char *str)
  *  0 for normal format
  *  1 for not format
  * */
-static int get_addr_obj_from_str(struct addr_obj *obj, const char *str)
+static int get_addr_obj_from_str(struct addr_obj *obj, char *str)
 {
-	char *pos=NULL;
-	char *cp=NULL;
-	int len=0, val=0;
+	char *pos=NULL, *end=NULL, *orig=NULL;
+	int val=0, idx=0;
 	struct in_addr addr;
+	int ret=0;
+	int star_num=0;
 
-	if(NULL!=(pos=strchr(str, '/'))){ // XX.XX.XX.XX/N
-		obj->type = IP_NET_MASK;
-		len = pos-str;
-		cp = malloc(len+1);
-		if(NULL==cp){
-			//TODO
-			return -1;
-		}
-		strncpy(cp, str, len);
-		*(cp+len)='\0';
-		inet_aton(cp, &addr);
-		obj->u.net.mask = addr.s_addr;
-		free(cp);
-		val = atoi(++pos);
-		masklen2ip(val, &addr);	
-		obj->u.net.length = addr.s_addr;
-	}else if(NULL!=(pos=strchr(str, '-'))){ // XX.XX.XX.XX-YY.YY.YY.YY
-		obj->type = IP_RANGE;
-		len = pos-str;	
-		cp = malloc(len+1);
-		if(NULL==cp){
-			//TODO
-			return -1;
-		}
-		strncpy(cp, str, len);
-		*(cp+len)='\0';
-		inet_aton(cp, &addr);
-		obj->u.range.min = addr.s_addr;
-		free(cp);
-		pos++;
-		inet_aton(pos, &addr);
-		obj->u.range.max = addr.s_addr;
-	}else if(NULL!=(pos=strchr(str, '|'))){ // XX.XX.XX.XX |YY.YY.YY.YY
-		obj->type = IP_GROUP;
-		const char *tmp=str;
-		int idx=0;
-		do{
-			len = pos-tmp;
-			cp = malloc(len+1);
-			if(NULL==cp){
-				//TODO
-				return -1;
-			}
-			strncpy(cp, tmp, len);
-			*(cp+len)='\0';
-			inet_aton(cp, &addr);
-			obj->u.group.ip_addrs[idx] = addr.s_addr;
-			free(cp);
-			idx++;
-			tmp=pos+1;
-			pos=strchr(tmp,'|');
-			if(NULL==pos){
-				pos=strchr(tmp, '\0');
-			}
-			if(idx>=GROUP_ITEM_MAX_NUM){
-				//TODO
-				return -1;
-			}
-		}while(NULL!=pos);
-	}else{ //single ip addr, XX.XX.XX.XX
-		obj->type = IP_HOST;
-		inet_aton(str, &addr);
-		obj->u.host_ip = addr.s_addr;
+	if(str[0]=='!'){ // not format
+		ret = 1;
+		str = str + 1;
 	}
-	return 0;
+	pos = orig = str;
+	end = str+strlen(str)+1;
+	while(pos<end){
+		if(*pos=='-'){ // range
+			obj->type = IP_RANGE;
+			*pos = '\0';
+			if(bad_ip_address(str)){
+				nm_log("Bad ip addr %s.\n", str);
+			}
+			inet_aton(str, &addr);
+			obj->u.range.min = addr.s_addr;
+			pos++;
+			inet_aton(pos, &addr);
+			obj->u.range.max = addr.s_addr;
+			break;
+		}else if(*pos=='/'){ // net mask
+			obj->type = IP_NET_MASK;
+			*pos = '\0';
+			if(bad_ip_address(str)){
+				nm_log("Bad ip addr %s.\n", str);
+			}
+			inet_aton(str, &addr);
+			obj->u.net.mask = addr.s_addr;
+			pos++;
+			val = atoi(pos);
+			masklen2ip(val, &addr);
+			obj->u.net.length = addr.s_addr;
+			break;
+		}else if(*pos=='|'){ // group
+			obj->type = IP_GROUP;
+			*pos = '\0';
+			if(bad_ip_address(orig)){
+				nm_log("Bad ip addr %s.\n", orig);
+			}
+			inet_aton(orig, &addr);
+			obj->u.group.ip_addrs[idx] = addr.s_addr;
+			obj->addr_mask |= addr.s_addr;
+			idx++;
+			orig = pos + 1;
+		}else if(*pos=='*'){ // same as net mask
+			obj->type = IP_NET_MASK;
+			*pos='0';
+			star_num++;
+		}else if(*pos=='\0'){
+			if(!obj->type){
+				obj->type = IP_HOST;
+			}
+			if(bad_ip_address(orig)){
+				nm_log("Bad ip addr %s.\n", orig);
+			}
+			inet_aton(orig, &addr);
+			obj->u.group.ip_addrs[idx] = addr.s_addr;
+			obj->addr_mask |= addr.s_addr;
+			if(star_num){
+				val = (4-star_num)*8;
+				masklen2ip(val, &addr);
+				obj->u.net.length = addr.s_addr;
+			}
+		}
+		pos++;
+	}
+
+	return ret;
 }
 
 static struct forward_rules *get_forward_rules(struct rte_json *json)
@@ -183,20 +259,20 @@ static struct forward_rules *get_forward_rules(struct rte_json *json)
 
 	item = rte_object_get_item(json, "forward_rules");
 	if(NULL==item){
-		goto out;
+		return NULL;
 	}
 
 	if(item->type!=JSON_ARRAY){
-		goto out;
+		return NULL;
 	}
 	rule_num = rte_array_get_size(item);	
 	if(rule_num==0){
-		goto out;
+		return NULL;
 	}
 	forward_rules = (struct forward_rules *)malloc(sizeof(struct forward_rules));
 	if(NULL==forward_rules){
 		nm_log("Failed to alloc for forward_rules.\n");
-		goto out;
+		return NULL;
 	}
 	memset(forward_rules, 0, sizeof(struct forward_rules));	
 	
@@ -204,7 +280,8 @@ static struct forward_rules *get_forward_rules(struct rte_json *json)
 	forward_rules->rule_entry = (struct rule_entry *)malloc(rule_num*sizeof(struct rule_entry));
 	if(NULL==forward_rules->rule_entry){
 		nm_log("Failed to alloc forward_rules->rule_entry.\n");
-		goto out;
+		free(forward_rules);
+		return NULL;
 	}
 	memset(forward_rules->rule_entry, 0, rule_num*sizeof(struct rule_entry));	
 	for(idx=0;idx<rule_num;idx++){
@@ -216,101 +293,112 @@ static struct forward_rules *get_forward_rules(struct rte_json *json)
 		}
 
 		tmp = rte_object_get_item(entry, "id");
-		if(NULL==tmp){
-			goto out;
+		if(NULL!=tmp){
+			if(tmp->type != JSON_INTEGER){
+				goto out;
+			}
+			rule_entry->id = tmp->u.val_int;
 		}
-		if(tmp->type != JSON_INTEGER){
-			goto out;
-		}
-		rule_entry->id = tmp->u.val_int;
 		
 		tmp = rte_object_get_item(entry, "sip");
-		if(NULL==tmp){
-			continue;
-		}
-		if(tmp->type != JSON_STRING){
-			goto out;
-		}
-		not_flag=get_addr_obj_from_str(&(rule_entry->sip), tmp->u.val_str);	
-		if(not_flag>0){
-			rule_entry->rule_not_flag |= RULE_NOT_SIP;
+		if(NULL!=tmp){
+			if(tmp->type != JSON_STRING){
+				goto out;
+			}
+			not_flag=get_addr_obj_from_str(&(rule_entry->sip), tmp->u.val_str);
+			if(not_flag>0){
+				rule_entry->rule_not_flag |= RULE_NOT_SIP;
+			}
 		}
 
 		tmp = rte_object_get_item(entry, "dip");
-		if(NULL==tmp){
-			continue;
-		}
-		if(tmp->type != JSON_STRING){
-			goto out;
-		}
-		not_flag = get_addr_obj_from_str(&(rule_entry->dip), tmp->u.val_str);	
-		if(not_flag>0){
-			rule_entry->rule_not_flag |= RULE_NOT_DIP;
+		if(NULL!=tmp){
+			if(tmp->type != JSON_STRING){
+				goto out;
+			}
+			not_flag = get_addr_obj_from_str(&(rule_entry->dip), tmp->u.val_str);
+			if(not_flag>0){
+				rule_entry->rule_not_flag |= RULE_NOT_DIP;
+			}
 		}
 
 		tmp = rte_object_get_item(entry, "sport");
-		if(NULL==tmp){
-			continue;
-		}
-		if(tmp->type != JSON_STRING){
-			goto out;
-		}
-		not_flag = get_num_obj_from_str(&(rule_entry->sport), tmp->u.val_str);
-		if(not_flag>0){
-			rule_entry->rule_not_flag |= RULE_NOT_SPORT;
+		if(NULL!=tmp){
+			if(tmp->type != JSON_STRING){
+				goto out;
+			}
+			not_flag = get_num_obj_from_str(&(rule_entry->sport), tmp->u.val_str);
+			if(not_flag>0){
+				rule_entry->rule_not_flag |= RULE_NOT_SPORT;
+			}
 		}
 
 		tmp = rte_object_get_item(entry, "dport");
-		if(NULL==tmp){
-			continue;
-		}
-		if(tmp->type != JSON_STRING){
-			goto out;
-		}
-		not_flag = get_num_obj_from_str(&(rule_entry->dport), tmp->u.val_str);
-		if(not_flag>0){
-			rule_entry->rule_not_flag |= RULE_NOT_DPORT;
+		if(NULL!=tmp){
+			if(tmp->type != JSON_STRING){
+				goto out;
+			}
+			not_flag = get_num_obj_from_str(&(rule_entry->dport), tmp->u.val_str);
+			if(not_flag>0){
+				rule_entry->rule_not_flag |= RULE_NOT_DPORT;
+			}
 		}
 
 		tmp = rte_object_get_item(entry, "proto");
-		if(NULL==tmp){
-			continue;
-		}
-		if(tmp->type != JSON_STRING){
-			goto out;
-		}
-		not_flag = get_num_obj_from_str(&(rule_entry->proto), tmp->u.val_str);
-		if(not_flag>0){
-			rule_entry->rule_not_flag |= RULE_NOT_PROTO;
+		if(NULL!=tmp){
+			if(tmp->type != JSON_STRING){
+				goto out;
+			}
+			not_flag = get_num_obj_from_str(&(rule_entry->proto), tmp->u.val_str);
+			if(not_flag>0){
+				rule_entry->rule_not_flag |= RULE_NOT_PROTO;
+			}
 		}
 
 		tmp = rte_object_get_item(entry, "vlanid");
-		if(NULL==tmp){
-			continue;
+		if(NULL!=tmp){
+			if(tmp->type != JSON_STRING){
+				goto out;
+			}
+			not_flag = get_num_obj_from_str(&(rule_entry->vlanid), tmp->u.val_str);
+			if(not_flag>0){
+				rule_entry->rule_not_flag |= RULE_NOT_VLANID;
+			}
 		}
-		if(tmp->type != JSON_STRING){
-			goto out;
+
+		tmp = rte_object_get_item(entry, "conversion");
+		if(NULL!=tmp){
+			if(tmp->type != JSON_INTEGER){
+				goto out;
+			}
+			rule_entry->conversion = tmp->u.val_int;
 		}
-		not_flag = get_num_obj_from_str(&(rule_entry->vlanid), tmp->u.val_str);
-		if(not_flag>0){
-			rule_entry->rule_not_flag |= RULE_NOT_VLANID;
+
+		if(rule_entry->conversion){
+			tmp = rte_object_get_item(entry, "dst_mac");
+			if(NULL!=tmp){
+				if(tmp->type != JSON_STRING){
+					goto out;
+				}
+				str_to_mac(tmp->u.val_str, rule_entry->dst_mac);
+			}
 		}
 
 		tmp = rte_object_get_item(entry, "forward");
-		if(NULL==tmp){
-			continue;
-		}
-		if(tmp->type != JSON_INTEGER){
-			goto out;
-		}
-		if(0==tmp->u.val_int){ /* 0: drop, 1: forward */
-			rule_entry->forward = NM_PKT_DROP;
-		}else{
-			rule_entry->forward = NM_PKT_FORWARD;
+		if(NULL!=tmp){
+			if(tmp->type != JSON_INTEGER){
+				goto out;
+			}
+			if(0==tmp->u.val_int){ /* 0: drop, 1: forward */
+				rule_entry->forward = NM_PKT_DROP;
+			}else{
+				rule_entry->forward = NM_PKT_FORWARD;
+			}
 		}
 	}
 	return forward_rules;
 out:
+	free(forward_rules->rule_entry);
 	free(forward_rules);
 	return NULL;
 }
@@ -352,6 +440,27 @@ int create_policy_response(char *buf, int result, int report_state)
 }
 
 static struct forward_rules_head *fw_policy_list=NULL;
+static int vsecplat_clear_policy(struct forward_rules *forward_rules)
+{
+	struct list_head *pos=NULL, *n=NULL;
+	struct rule_entry *rule_entry=NULL, *pos_entry=NULL;
+	int rule_idx=0;
+
+	nm_mutex_lock(&fw_policy_list->mutex);
+	for(rule_idx=0;rule_idx<forward_rules->rule_num;rule_idx++){
+		rule_entry = forward_rules->rule_entry+rule_idx;
+		list_for_each_safe(pos, n, &fw_policy_list->list){
+			pos_entry = list_entry(pos, struct rule_entry, list);
+			if(rule_entry->id == pos_entry->id){
+				list_del(&pos_entry->list);
+				free(pos_entry);
+			}
+		}
+	}
+	nm_mutex_unlock(&fw_policy_list->mutex);
+	return 0;
+}
+
 static int vsecplat_del_policy(struct forward_rules *forward_rules)
 {
 	struct list_head *pos=NULL, *n=NULL;
@@ -365,7 +474,6 @@ static int vsecplat_del_policy(struct forward_rules *forward_rules)
 			if(rule_entry->id == pos_entry->id){
 				list_del(&pos_entry->list);
 				free(pos_entry);
-				break;
 			}
 		}
 	}
@@ -381,7 +489,7 @@ static int vsecplat_add_policy(struct forward_rules *forward_rules)
 	struct rule_entry *rule_entry=NULL;
 
 	// First, delete the rule with the same id
-	vsecplat_del_policy(forward_rules);
+	vsecplat_clear_policy(forward_rules);
 
 	nm_mutex_lock(&fw_policy_list->mutex);	
 	for(rule_idx=0; rule_idx<forward_rules->rule_num; rule_idx++){
@@ -402,7 +510,7 @@ int vsecplat_parse_policy(const char *buf)
 
 	json = rte_parse_json(buf);
 	if(NULL==json){
-		printf("Failed to parse policy json.\n");
+		nm_log("Failed to parse policy json.\n");
 		return -1;
 	}
 
@@ -416,9 +524,13 @@ int vsecplat_parse_policy(const char *buf)
 	}
 	action = item->u.val_int;
 
+	if(action==NM_CHECK_RULES){
+		rte_destroy_json(json);
+		return 0;
+	}
 	forward_rules = get_forward_rules(json);		
 	if(NULL==forward_rules){
-		// TODO
+		rte_destroy_json(json);
 		return -1;
 	}
 	switch(action){
@@ -444,10 +556,15 @@ out:
 /*
  * if match return 1, otherwise return 0 
  **/
-static int test_match_addr_obj(struct addr_obj *addr_obj, const u32 ip)
+static inline int test_match_addr_obj(struct addr_obj *addr_obj, const u32 ip)
 {
 	int i=0;
+	if(addr_obj->addr_mask && ((addr_obj->addr_mask&ip)!=ip)){
+		return 0;
+	}
 	switch(addr_obj->type){
+		case IP_NULL:
+			return 1;
 		case IP_HOST:
 			if((addr_obj->u.host_ip==0)||(addr_obj->u.host_ip==ip)){
 				return 1;
@@ -476,8 +593,38 @@ static int test_match_addr_obj(struct addr_obj *addr_obj, const u32 ip)
 	return 0;
 }
 
-static int test_match_num_obj(struct num_obj *num_obj, const u32 num)
+static inline int test_match_num_obj(struct num_obj *num_obj, const u32 num)
 {
+	int i=0;
+
+	if(num_obj->num_mask && ((num_obj->num_mask&num)!=num)){
+		return 0;
+	}
+
+	switch(num_obj->type){
+		case NUM_NULL:
+			return 1;
+		case NUM_SINGLE:
+			if((num_obj->u.num==0)||(num_obj->u.num==num)){
+				return 1;
+			}
+			break;
+		case NUM_RANGE:
+			if((num_obj->u.range.min<=num)&&(num_obj->u.range.max>=num)){
+				return 1;
+			}
+			break;
+		case NUM_GROUP:
+			for(i=0;i<GROUP_ITEM_MAX_NUM;i++){
+				if(num==num_obj->u.group.num[i]){
+					return 1;
+				}
+			}
+			break;
+		default:
+			break;
+	}
+
 	return 0;
 }
 
