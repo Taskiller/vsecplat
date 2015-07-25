@@ -177,6 +177,7 @@ int vsecplat_deal_policy(struct thread *thread)
 #if 1
 	readlen = read(accept_sock, (conn_desc->policy_buf+conn_desc->recv_ofs), 4096);
 	if(readlen<=0){ // sock is close or error
+		close(accept_sock);
 		clean_conn_desc();
 		return -1;
 	}
