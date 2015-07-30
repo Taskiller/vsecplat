@@ -439,6 +439,7 @@ static char *json_strdup(const char *str)
 }
 
 static char *print_value(struct rte_json *json, int depth, int fmt);
+static int persist_value(char *buf, struct rte_json *json, int depth, int fmt);
 static char *print_number(struct rte_json *json)
 {
 	char *str=NULL;
@@ -869,4 +870,246 @@ int rte_object_del_item(struct rte_json *json, const char *name)
 		rte_array_del_item(json, i);
 	}
 	return 0;
+}
+
+static int json_persist_str(char *buf, const char *str)
+{
+	int len;
+
+	len = strlen(str) + 1;
+	memcpy(buf, str, len);
+
+	return len;
+}
+
+static int persist_number(char *buf, struct rte_json *json)
+{
+	int len;
+	char str[21];
+	memset(str, 0, 21);
+	if(json->type==JSON_INTEGER){
+		sprintf(str, "%ld", json->u.val_int);
+	}else if(json->type==JSON_FLOAT){
+		sprintf(str, "%f", json->u.val_flt);
+	}
+	len = strlen(str);
+	memcpy(buf, str, len);
+
+	return len;
+}
+
+static int persist_string_ptr(char *buf, const char *str)
+{
+	const char *ptr;
+	char *ptr2;
+	unsigned char token;
+
+	if (NULL==str){
+		return json_persist_str(buf, "");
+	}
+
+	ptr2=buf;
+	ptr=str;
+	*ptr2++='\"';
+	while (*ptr){
+		if((unsigned char)*ptr>31&&(*ptr!='\"')&&(*ptr!='\\')){
+			*ptr2++=*ptr++;
+		}else {
+			*ptr2++='\\';  // 有转义字符
+			switch (token=*ptr++){
+				case '\\':	*ptr2++='\\';	break;
+				case '\"':	*ptr2++='\"';	break;
+				case '\b':	*ptr2++='b';	break;
+				case '\f':	*ptr2++='f';	break;
+				case '\n':	*ptr2++='n';	break;
+				case '\r':	*ptr2++='r';	break;
+				case '\t':	*ptr2++='t';	break;
+				default:
+					sprintf(ptr2,"u%04x",token);
+					ptr2+=5;
+					break;	/* escape and print */
+			}
+		}
+	}
+	*ptr2++='\"';
+
+	return (ptr2-buf);
+}
+
+static int persist_string(char *buf, struct rte_json *json)
+{
+	return persist_string_ptr(buf, json->u.val_str);
+}
+
+static int persist_array(char *buf, struct rte_json *json, int depth, int fmt)
+{
+	char *ptr=NULL;
+	int entry_len=0;
+	int numentries=0,i=0,fail=0;
+	struct rte_json *item=json->member;
+
+	while(NULL!=item){ // 先计算Array中member的数量
+		numentries++;
+		item=item->next;
+	}
+
+	if(0==numentries){ // 若Array为空
+		strcpy(buf, "[]");
+		return 3;
+	}
+
+	/* 分别对每个Member进行序列化*/
+	item=json->member;
+	ptr=buf;
+	*ptr++='[';
+	while((NULL!=item) && !fail){
+		entry_len=persist_value(ptr, item, depth+1, fmt);
+		ptr+=entry_len;
+		if(entry_len<=0){
+			fail=1;
+		}
+		if(i!=(numentries-1)){
+			*ptr++=',';
+			if(fmt){
+				*ptr++=' ';
+			}
+		}
+		i++;
+		item=item->next;
+	}
+	*ptr++=']';
+
+	if(fail){
+		return -1;
+	}
+
+	return (ptr-buf);
+}
+
+static int persist_object(char *buf, struct rte_json *json, int depth, int fmt)
+{
+	char *ptr;
+	int numentries=0;
+	int name_len=0, entry_len=0;
+	int i=0,j=0;
+	int fail=0;
+	struct rte_json *item=json->member;
+
+	/* 计算Object的member个数*/
+	while(item){
+		numentries++;
+		item=item->next;
+	}
+
+	ptr=buf;
+	if(0==numentries){ // 如果是空Object
+		*ptr++='{';
+		if(fmt){
+			*ptr++='\n';
+			for(i=0;i<depth-1;i++){
+				*ptr++='\t';
+			}
+		}
+		*ptr++='}';
+		*ptr++='\0';
+		return (ptr-buf);
+	}
+
+	item = json->member;
+	depth++;
+
+	*ptr++='{';
+	if(fmt){
+		*ptr++='\n';
+	}
+	while(NULL!=item){ // 分别初始化每个member的名和值
+		if(fmt){
+			for(j=0;j<depth;j++){
+				*ptr++='\t';
+			}
+		}
+		name_len = persist_string_ptr(ptr, item->name);
+		if(name_len<=0){
+			fail=1;
+		}
+		ptr += name_len;
+		*ptr++=':';
+		if(fmt){
+			*ptr++='\t';
+		}
+
+		entry_len = persist_value(ptr, item, depth, fmt);
+		ptr += entry_len;
+
+		if(entry_len<=0){
+			fail=1;
+		}
+		if(i!=(numentries-1)){ // 最后一个member后面没有逗号
+			*ptr++=',';
+		}
+		if(fmt){
+			*ptr++='\n';
+		}
+		i++;
+		item=item->next;
+	}
+
+	if(fail){
+		return -1;
+	}
+
+	if(fmt){
+		for(i=0;i<depth-1;i++){
+			*ptr++='\t';
+		}
+	}
+
+	*ptr++='}';
+
+	return (ptr-buf);
+}
+
+static int persist_value(char *buf, struct rte_json *json, int depth, int fmt)
+{
+	int len=0;
+	if(NULL==json){
+		return 0;
+	}
+
+	switch(json->type){
+		case JSON_NULL:
+			len = json_persist_str(buf, "null");
+			break;
+		case JSON_FALSE:
+			len = json_persist_str(buf, "false");
+			break;
+		case JSON_TRUE:
+			len = json_persist_str(buf, "true");
+			break;
+		case JSON_INTEGER:
+		case JSON_FLOAT:
+			len = persist_number(buf, json);
+			break;
+		case JSON_STRING:
+			len = persist_string(buf, json);
+			break;
+		case JSON_OBJECT:
+			len = persist_object(buf, json, depth, fmt);
+			break;
+		case JSON_ARRAY:
+			len = persist_array(buf, json, depth, fmt);
+			break;
+	}
+	return len;
+}
+
+/*
+ * 将JSON的序列化结果存放在buf中，省去内存分配的过程。
+ * 返回值：
+ * <=0 : 失败
+ *  >0 : 序列化结果字符串的长度
+ * */
+int rte_persist_json(char *buf, struct rte_json *json, int fmt)
+{
+	return persist_value(buf, json, 0, fmt);
 }

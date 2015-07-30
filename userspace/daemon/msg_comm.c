@@ -13,6 +13,7 @@
 #include "vsecplat_policy.h"
 #include "vsecplat_record.h"
 #include "msg_comm.h"
+#include "tea_crypt.h"
 
 #define NM_RECV_BUF_LEN 512*1024
 #define NM_SEND_BUF_LEN 64*1024
@@ -137,24 +138,38 @@ int vsecplat_report_stats(struct thread *thread)
 
 	list_for_each_safe(pos, tmp, &global_record_json_list){
 		record_json_item = list_entry(pos, struct record_json_item, list);
+	#if 0
 		record_json_item->json_str = rte_serialize_json(record_json_item->root, JSON_WITHOUT_FORMAT);
 		if(NULL==record_json_item->json_str){
 			nm_log("Failed to serialize record item.\n");
 			goto out;
 		}
 		len = strlen(record_json_item->json_str);
+		len = nm_encrypt(record_json_item->json_str, len);
 		conn_desc->send_len = len+sizeof(struct msg_head);
 		msg->len = len + sizeof(struct msg_head);
 		msg->msg_type = NM_MSG_REPORTS;
 		memcpy(msg->data, record_json_item->json_str, len);
+	#endif
+		len = rte_persist_json(msg->data, record_json_item->root, JSON_WITHOUT_FORMAT);
+		if(len<=0){
+			goto out;
+			nm_log("Failed to serialize record item.\n");
+		}
+		len = nm_encrypt(msg->data, len);
+		msg->len = len + sizeof(struct msg_head);
+		msg->msg_type = NM_MSG_REPORTS;
+
 		w_len = sendto(conn_desc->report_sock, (void *)conn_desc->report_buf, conn_desc->send_len,
 						0, (struct sockaddr *)&conn_desc->serv_addr, sizeof(conn_desc->serv_addr));
 		printf("send record: msg->len=%d, send_len=%d, data=%s\n\n", msg->len, w_len, msg->data);
-		// printf("send record: msg->len=%d, send_len=%d\n", msg->len, w_len);
 		if(w_len<=0){
 			perror("socket write error:");
 			goto out;
 		}
+	#if 0
+		free(record_json_item->json_str);
+	#endif
 		memset(conn_desc->report_buf, 0, NM_SEND_BUF_LEN);
 	}
 

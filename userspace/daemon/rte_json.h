@@ -29,6 +29,7 @@ struct rte_json *rte_parse_json(const char *str);
 int rte_destroy_json(struct rte_json *json);
 int rte_traverse_json(struct rte_json *json);
 char *rte_serialize_json(struct rte_json *json, int fmt);
+int rte_persist_json(char *buf, struct rte_json *json, int fmt);
 int rte_array_get_size(struct rte_json *array);
 struct rte_json *rte_array_get_item(struct rte_json *array, int idx);
 int rte_array_add_item(struct rte_json *array, struct rte_json *item);
