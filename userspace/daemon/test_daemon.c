@@ -14,8 +14,18 @@
 #include "thread.h"
 #include "msg_comm.h"
 
+enum{
+	SOCKET_WANT_CONNECT,
+	SOCKET_WANT_WRITE,
+	SOCKET_WANT_READ,
+};
+
 static struct thread_master *master=NULL;
 static struct msg_head *policy_msg=NULL;
+static char response_buf[2048];
+static int conn_status=SOCKET_WANT_CONNECT;
+static int conn_sock=0;
+
 static int init_policy_buf()
 {
 	int fd;
@@ -81,13 +91,31 @@ int deal_stats(struct thread *thread)
 	return 0;
 }
 
-enum{
-	CONNECTING_SERV,
-	CONNECT_OK
-};
+int msg_timer_func(struct thread *thread);
+static char readbuf[BUF_LEN];
+int deal_response(struct thread *thread)
+{
+	int sock = THREAD_FD(thread);	
+	int len = 0;
+	struct msg_head *msg=(struct msg_head *)response_buf;
+	printf("In deal_response.\n");
+	memset(response_buf, 0, 2048);
 
-static int conn_status=CONNECTING_SERV;
-static int conn_sock=0;
+	len = read(sock, (void *)response_buf, 2048);
+	if(len<=0){
+		close(sock);
+		conn_status = SOCKET_WANT_CONNECT;
+		goto out;
+	}
+
+	printf("response: type=%d, len=%d, data=%s\n", msg->msg_type, msg->len, msg->data);
+
+	conn_status = SOCKET_WANT_WRITE;
+out:
+	thread_add_timer(thread->master, msg_timer_func, NULL, 5);
+	return 0;
+}
+
 int msg_timer_func(struct thread *thread)
 {
 	int sock;
@@ -96,7 +124,7 @@ int msg_timer_func(struct thread *thread)
 
 	printf("In msg_timer_func, conn_status=%d\n", conn_status);
 	switch(conn_status){
-		case CONNECTING_SERV:
+		case SOCKET_WANT_CONNECT:
 			sock = socket(AF_INET, SOCK_STREAM, 0);
 			if(sock<0){
 				goto out;
@@ -111,19 +139,22 @@ int msg_timer_func(struct thread *thread)
 				printf("Failed to connect server.\n");
 				goto out;
 			}
-			conn_status = CONNECT_OK;
+			conn_status = SOCKET_WANT_WRITE;
 			conn_sock = sock;
 			break;
 
-		case CONNECT_OK:
+		case SOCKET_WANT_WRITE:
 			ret = write(conn_sock, policy_msg, policy_msg->len);
 			if(ret<0){
 				perror("socket write error: ");	
+				close(conn_sock);
+				conn_status = SOCKET_WANT_CONNECT;
+				goto out;
 			}
 			printf("send policy, msg len=%d, writelen=%d, policy=%s\n", policy_msg->len, ret, policy_msg->data);
-	
-			break;
-
+			conn_status = SOCKET_WANT_READ;	
+			thread_add_read(thread->master, deal_response, NULL, conn_sock);
+			return 0;
 		default:
 			break;
 	}

@@ -31,11 +31,6 @@ struct record_json_item{
 	char *json_str;
 };
 
-enum{
-	JSON_WITHOUT_FORMAT,
-	JSON_WITH_FORMAT,
-};
-
 int vsecplat_init_record_bucket(void);
 int vsecplat_record_pkt(struct nm_skb *skb);
 int vsecplat_test_record(void);

@@ -82,7 +82,7 @@ struct rule_entry{
 
 struct forward_rules{
 	int rule_num;
-	struct rule_entry *rule_entry;
+	void **rule_entry;
 };
 
 enum{

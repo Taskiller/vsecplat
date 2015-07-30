@@ -24,6 +24,11 @@ struct rte_json{
 	}u;
 };
 
+enum{
+	JSON_WITHOUT_FORMAT,
+	JSON_WITH_FORMAT,
+};
+
 struct rte_json *new_json_item(void);
 struct rte_json *rte_parse_json(const char *str);
 int rte_destroy_json(struct rte_json *json);

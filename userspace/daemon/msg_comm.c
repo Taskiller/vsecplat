@@ -163,8 +163,10 @@ int vsecplat_report_stats(struct thread *thread)
 		w_len = sendto(conn_desc->report_sock, (void *)conn_desc->report_buf, conn_desc->send_len,
 						0, (struct sockaddr *)&conn_desc->serv_addr, sizeof(conn_desc->serv_addr));
 		printf("send record: msg->len=%d, send_len=%d, data=%s\n\n", msg->len, w_len, msg->data);
-		if(w_len<=0){
-			perror("socket write error:");
+		if(w_len<0){
+			nm_log("socket write error, errno=%d\n", errno);
+			close(conn_desc->report_sock);
+			conn_desc->report_sock = socket(AF_INET, SOCK_DGRAM, 0);
 			goto out;
 		}
 	#if 0
@@ -202,26 +204,29 @@ int vsecplat_deal_policy(struct thread *thread)
 	conn_desc->recv_ofs += readlen;
 
 	if(conn_desc->recv_ofs<conn_desc->recv_len){ // recv not complete
-		printf("msg len=%d, readlen=%d\n", msg->len, readlen);
+		printf("recv not complete: msg len=%d, readlen=%d\n", msg->len, readlen);
 		goto out;
 	}
 	
 	printf("vsecplat_deal_policy readlen=%d, msg len=%d type=%d policy:%s\n", readlen, msg->len, msg->msg_type, msg->data);
 
 	if(msg->msg_type!=NM_MSG_RULES){
+		nm_log("Received msg_type is wrong : %d\n", msg->msg_type);
 		goto out;
 	}
 
-	result = vsecplat_parse_policy(msg->data);		
+	result = vsecplat_parse_policy(msg->data);
 	memset(msg->data, 0, conn_desc->recv_len);
 	resp_len = create_policy_response(msg->data, result, 0);
-	if(resp_len<=0){
+	if(resp_len<0){
+		nm_log("Failed to create response.\n");
 		goto out;
 	}
-	msg->len = resp_len;	
-	ret = write(accept_sock, msg, msg->len);		
+	resp_len = nm_encrypt(msg->data, resp_len);
+	msg->len = resp_len + sizeof(struct msg_head);
+	ret = write(accept_sock, msg, msg->len);
 	if(ret<0){
-		//TODO
+		nm_log("Failed to send response.\n");
 	}
 
 	memset(conn_desc->policy_buf, 0, conn_desc->recv_len);

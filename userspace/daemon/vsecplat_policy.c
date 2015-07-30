@@ -277,15 +277,25 @@ static struct forward_rules *get_forward_rules(struct rte_json *json)
 	memset(forward_rules, 0, sizeof(struct forward_rules));	
 	
 	forward_rules->rule_num = rule_num;
-	forward_rules->rule_entry = (struct rule_entry *)malloc(rule_num*sizeof(struct rule_entry));
+	forward_rules->rule_entry = (void **)malloc(rule_num*sizeof(void *));
 	if(NULL==forward_rules->rule_entry){
 		nm_log("Failed to alloc forward_rules->rule_entry.\n");
 		free(forward_rules);
 		return NULL;
 	}
-	memset(forward_rules->rule_entry, 0, rule_num*sizeof(struct rule_entry));	
+	memset((void *)forward_rules->rule_entry, 0, rule_num*sizeof(void *));
+
 	for(idx=0;idx<rule_num;idx++){
-		rule_entry = forward_rules->rule_entry + idx;
+		rule_entry = (struct rule_entry *)malloc(sizeof(struct rule_entry));
+		if(NULL==rule_entry){
+			//TODO
+		}
+		memset(rule_entry, 0, sizeof(struct rule_entry));	
+		*(forward_rules->rule_entry+idx)=rule_entry;
+	}
+
+	for(idx=0;idx<rule_num;idx++){
+		rule_entry = *(forward_rules->rule_entry+idx);
 		entry = rte_array_get_item(item, idx);
 		if(NULL==entry){
 			// TODO
@@ -397,19 +407,25 @@ static struct forward_rules *get_forward_rules(struct rte_json *json)
 		}
 	}
 	return forward_rules;
+
 out:
-	free(forward_rules->rule_entry);
+	for(idx=0;idx<forward_rules->rule_num;idx++){
+		if(*(forward_rules->rule_entry+idx)!=NULL){
+			free(forward_rules->rule_entry);
+		}
+	}
 	free(forward_rules);
 	return NULL;
 }
 
 /*
  * return:
- * 0  : success
+ * >0  : success, len of json string
  * -1 : failure 
  * */
 int create_policy_response(char *buf, int result, int report_state)
 {
+	int len;
 	struct rte_json *root=NULL;
 	struct rte_json *item=NULL;
 	root = new_json_item();
@@ -436,7 +452,13 @@ int create_policy_response(char *buf, int result, int report_state)
 	item->u.val_int = report_state;
 	rte_object_add_item(root, "report_state", item);
 
-	return 0;
+	len = rte_persist_json(buf, root, JSON_WITHOUT_FORMAT);
+	if(len<=0){
+		rte_destroy_json(root);
+		return -1;
+	}
+
+	return len;
 }
 
 static struct forward_rules_head *fw_policy_list=NULL;
@@ -448,11 +470,11 @@ static int vsecplat_clear_policy(struct forward_rules *forward_rules)
 
 	nm_mutex_lock(&fw_policy_list->mutex);
 	for(rule_idx=0;rule_idx<forward_rules->rule_num;rule_idx++){
-		rule_entry = forward_rules->rule_entry+rule_idx;
+		rule_entry = *(forward_rules->rule_entry+rule_idx);
 		list_for_each_safe(pos, n, &fw_policy_list->list){
 			pos_entry = list_entry(pos, struct rule_entry, list);
 			if(rule_entry->id == pos_entry->id){
-				list_del(&pos_entry->list);
+				list_del(pos);
 				free(pos_entry);
 			}
 		}
@@ -466,20 +488,22 @@ static int vsecplat_del_policy(struct forward_rules *forward_rules)
 	struct list_head *pos=NULL, *n=NULL;
 	struct rule_entry *rule_entry=NULL, *pos_entry=NULL;
 	int rule_idx=0;	
+
 	nm_mutex_lock(&fw_policy_list->mutex);
 	for(rule_idx=0;rule_idx<forward_rules->rule_num;rule_idx++){
-		rule_entry = forward_rules->rule_entry+rule_idx;	
+		rule_entry = *(forward_rules->rule_entry+rule_idx);	
 		list_for_each_safe(pos, n, &fw_policy_list->list){
 			pos_entry = list_entry(pos, struct rule_entry, list);
 			if(rule_entry->id == pos_entry->id){
-				list_del(&pos_entry->list);
+				list_del(pos);
 				free(pos_entry);
 			}
 		}
 	}
 	nm_mutex_unlock(&fw_policy_list->mutex);
-	free(forward_rules->rule_entry);
-
+	for(rule_idx=0;rule_idx<forward_rules->rule_num;rule_idx++){
+		free(*(forward_rules->rule_entry+rule_idx));
+	}
 	return 0;
 }
 
@@ -493,7 +517,7 @@ static int vsecplat_add_policy(struct forward_rules *forward_rules)
 
 	nm_mutex_lock(&fw_policy_list->mutex);	
 	for(rule_idx=0; rule_idx<forward_rules->rule_num; rule_idx++){
-		rule_entry = forward_rules->rule_entry+rule_idx;
+		rule_entry = *(forward_rules->rule_entry+rule_idx);
 		INIT_LIST_HEAD(&rule_entry->list);
 		list_add_tail(&rule_entry->list, &fw_policy_list->list);
 	}	
