@@ -1100,6 +1100,9 @@ static int persist_value(char *buf, struct rte_json *json, int depth, int fmt)
 			len = persist_array(buf, json, depth, fmt);
 			break;
 	}
+	if(depth==0){
+		*(buf+len)='\0';
+	}
 	return len;
 }
 

@@ -284,7 +284,6 @@ int vsecplat_persist_record(void)
 		return -1;
 	}
 
-
 	for(idx=0;idx<VSECPLAT_RECORD_HASH_SIZE;idx++){
 		bucket = record_bucket_hash + idx;	
 		nm_mutex_lock(&bucket->mutex);

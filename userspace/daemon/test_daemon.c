@@ -13,6 +13,7 @@
 
 #include "thread.h"
 #include "msg_comm.h"
+#include "tea_crypt.h"
 
 enum{
 	SOCKET_WANT_CONNECT,
@@ -44,7 +45,8 @@ static int init_policy_buf()
 	}
 	len = read(fd, policy_msg->data, 2048);
 	close(fd);
-	
+
+	len = nm_encrypt((unsigned int *)policy_msg->data, len);
 	policy_msg->len = len + sizeof(struct msg_head);
 	policy_msg->msg_type = NM_MSG_RULES;
 
@@ -53,7 +55,9 @@ static int init_policy_buf()
 
 int parse_report(struct msg_head *report_msg)
 {
-	// printf("report json=%s\n", report_msg->data);
+	int len=0;
+	len = nm_decrypt((unsigned int *)report_msg->data, report_msg->len-sizeof(struct msg_head));
+	printf("Recv stat len=%d, contents:\n%s\n", len, report_msg->data);
 	return 0;
 }
 
@@ -108,6 +112,7 @@ int deal_response(struct thread *thread)
 		goto out;
 	}
 
+	nm_decrypt((unsigned int *)msg->data, len);
 	printf("response: type=%d, len=%d, data=%s\n", msg->msg_type, msg->len, msg->data);
 
 	conn_status = SOCKET_WANT_WRITE;
@@ -151,8 +156,9 @@ int msg_timer_func(struct thread *thread)
 				conn_status = SOCKET_WANT_CONNECT;
 				goto out;
 			}
-			printf("send policy, msg len=%d, writelen=%d, policy=%s\n", policy_msg->len, ret, policy_msg->data);
+			printf("send policy, msg len=%d, writelen=%d\n", policy_msg->len, ret);
 			conn_status = SOCKET_WANT_READ;	
+
 			thread_add_read(thread->master, deal_response, NULL, conn_sock);
 			return 0;
 		default:
