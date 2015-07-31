@@ -143,7 +143,9 @@ int vsecplat_report_stats(struct thread *thread)
 			nm_log("Failed to serialize record item.\n");
 			goto out;
 		}
-		len = nm_encrypt((unsigned int *)msg->data, len);
+		if(global_vsecplat_config->isencrypted){
+			len = nm_encrypt((unsigned int *)msg->data, len);
+		}
 		conn_desc->send_len = len+sizeof(struct msg_head);
 		msg->len = conn_desc->send_len;
 		msg->msg_type = NM_MSG_REPORTS;
@@ -161,7 +163,7 @@ int vsecplat_report_stats(struct thread *thread)
 
 out:
 	clear_global_record_json_list();
-	thread_add_timer(master, vsecplat_report_stats, NULL, VSECPLAT_REPORT_INTERVAL);
+	thread_add_timer(master, vsecplat_report_stats, NULL, global_vsecplat_config->time_interval);
 	return 0;
 }
 
@@ -195,7 +197,10 @@ int vsecplat_deal_policy(struct thread *thread)
 		nm_log("Received msg_type is wrong : %d\n", msg->msg_type);
 		goto out;
 	}
-	nm_decrypt((unsigned int *)msg->data, msg->len-sizeof(struct msg_head));
+
+	if(global_vsecplat_config->isencrypted){
+		nm_decrypt((unsigned int *)msg->data, msg->len-sizeof(struct msg_head));
+	}
 
 	printf("vsecplat_deal_policy readlen=%d, msg_len=%d type=%d contents:\n%s\n", readlen, msg->len, msg->msg_type, msg->data);
 	result = vsecplat_parse_policy(msg->data);
@@ -207,7 +212,9 @@ int vsecplat_deal_policy(struct thread *thread)
 		goto out;
 	}
 	printf("vsecplat_parse_policy response len=%d, contents:\n%s\n", resp_len, msg->data);
-	resp_len = nm_encrypt((unsigned int *)msg->data, resp_len);
+	if(global_vsecplat_config->isencrypted){
+		resp_len = nm_encrypt((unsigned int *)msg->data, resp_len);
+	}
 	msg->len = resp_len + sizeof(struct msg_head);
 	ret = write(accept_sock, msg, msg->len);
 	if(ret<0){

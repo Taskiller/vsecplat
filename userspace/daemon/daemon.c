@@ -54,7 +54,7 @@ int main(void)
 		return -1;
 	}
 
-#if 0 // Disable to test function on host
+#if 1 // Disable to test function on host
 	// setup mgt interface ip address and set it to up
 	ret = setup_mgt_interface();
 	if(ret<0){
@@ -91,7 +91,7 @@ int main(void)
 	packet_handle_thread(NULL);
 #endif
 
-#if 0
+#if 1
 	/* 创建处理数据包的线程 */
 	ret = pthread_create(&packet_thread_id, NULL, &packet_handle_thread, NULL);
 	if(ret<0){
@@ -110,7 +110,7 @@ int main(void)
 #if 1
 	/* 报告统计数据的线程 */
 	nm_log("Add report stats thread.\n");
-	thread_add_timer(master, vsecplat_report_stats, NULL, VSECPLAT_REPORT_INTERVAL);
+	thread_add_timer(master, vsecplat_report_stats, NULL, global_vsecplat_config->time_interval);
 #endif
 
 #if 1

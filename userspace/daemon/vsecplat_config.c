@@ -185,6 +185,11 @@ int parse_vsecplat_config(void)
 		global_vsecplat_config->time_interval = item->u.val_int;	
 	}
 
+	item = rte_object_get_item(json, "isencrypted");
+	if(NULL!=item){
+		global_vsecplat_config->isencrypted = item->u.val_int;
+	}
+
 	rte_destroy_json(json);
 	return  0;
 
