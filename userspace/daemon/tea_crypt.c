@@ -52,11 +52,21 @@ static void tea_decrypt(unsigned int *val, unsigned int *key)
 int nm_encrypt(unsigned int *val, int len)
 {
 	int i=0;
+#if 0
 	int crypt_len = ((len&7)?(len+8-(len&7)):len)/sizeof(unsigned int);
 	for(i=0;i<crypt_len;i+=2){
 		tea_encrypt(val+i, tea_key);
 	}
 	return crypt_len*sizeof(unsigned int);
+#endif
+	unsigned char *ptr=(unsigned char *)val;
+	for(i=0;i<len;i++){
+		if(*(ptr+i) & 0x80){
+			*(ptr+i) &= 0x7f;
+		}else{
+			*(ptr+i) |= 0x80;
+		}
+	}
 }
 /*
  * val 为待解密的数据
@@ -66,10 +76,20 @@ int nm_encrypt(unsigned int *val, int len)
 int nm_decrypt(unsigned int *val, int len)
 {
 	int i=0;
+#if 0
 	int crypt_len = len/sizeof(unsigned int);
 	for(i=0;i<crypt_len;i+=2){
 		tea_decrypt(val+i, tea_key);
 	}
 
 	return crypt_len*sizeof(unsigned int);
+#endif
+	unsigned char *ptr=(unsigned char *)val;
+	for(i=0;i<len;i++){
+		if(*(ptr+i) & 0x80){
+			*(ptr+i) &= 0x7f;
+		}else{
+			*(ptr+i) |= 0x80;
+		}
+	}
 }

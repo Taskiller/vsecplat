@@ -84,10 +84,9 @@ int main(void)
 		return -1;
 	}
 
-	vsecplat_test_record();
-
-	add_test_policy();
 #if 0 // For test
+	vsecplat_test_record();
+	add_test_policy();
 	packet_handle_thread(NULL);
 #endif
 
