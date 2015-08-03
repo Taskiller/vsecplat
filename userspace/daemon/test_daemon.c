@@ -46,7 +46,7 @@ static int init_policy_buf()
 	len = read(fd, policy_msg->data, 2048);
 	close(fd);
 
-	len = nm_encrypt((unsigned int *)policy_msg->data, len);
+	//len = nm_encrypt((unsigned int *)policy_msg->data, len);
 
 	policy_msg->len = len + sizeof(struct msg_head);
 	policy_msg->msg_type = NM_MSG_RULES;
@@ -57,7 +57,7 @@ static int init_policy_buf()
 int parse_report(struct msg_head *report_msg)
 {
 	int len=0;
-	len = nm_decrypt((unsigned int *)report_msg->data, report_msg->len-sizeof(struct msg_head));
+	//len = nm_decrypt((unsigned int *)report_msg->data, report_msg->len-sizeof(struct msg_head));
 	printf("Recv stat len=%d, contents:\n%s\n", len, report_msg->data);
 	return 0;
 }
@@ -113,12 +113,12 @@ int deal_response(struct thread *thread)
 		goto out;
 	}
 
-	nm_decrypt((unsigned int *)msg->data, len);
+	// nm_decrypt((unsigned int *)msg->data, len);
 	printf("response: type=%d, len=%d, data=%s\n", msg->msg_type, msg->len, msg->data);
 
 	conn_status = SOCKET_WANT_WRITE;
 out:
-	thread_add_timer(thread->master, msg_timer_func, NULL, 5);
+	// thread_add_timer(thread->master, msg_timer_func, NULL, 5);
 	return 0;
 }
 
@@ -138,8 +138,8 @@ int msg_timer_func(struct thread *thread)
 			memset(&serv, 0, sizeof(struct sockaddr_in));
 			serv.sin_family = AF_INET;
 			serv.sin_port = htons(8000);
-			// inet_pton(AF_INET, "192.168.1.140", &serv.sin_addr);
-			inet_pton(AF_INET, "127.0.0.1", &serv.sin_addr);
+			inet_pton(AF_INET, "192.168.1.140", &serv.sin_addr);
+			// inet_pton(AF_INET, "127.0.0.1", &serv.sin_addr);
 			ret = connect(sock, (struct sockaddr *)&serv, sizeof(struct sockaddr_in));
 			if(ret<0){
 				close(sock);
@@ -151,6 +151,7 @@ int msg_timer_func(struct thread *thread)
 			break;
 
 		case SOCKET_WANT_WRITE:
+		#if 1
 			ret = write(conn_sock, policy_msg, policy_msg->len);
 			if(ret<0){
 				perror("socket write error: ");	
@@ -160,8 +161,8 @@ int msg_timer_func(struct thread *thread)
 			}
 			printf("send policy, msg len=%d, writelen=%d\n", policy_msg->len, ret);
 			conn_status = SOCKET_WANT_READ;	
-
 			thread_add_read(thread->master, deal_response, NULL, conn_sock);
+		#endif
 			return 0;
 		default:
 			break;

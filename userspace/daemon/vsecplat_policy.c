@@ -148,6 +148,9 @@ static int get_num_obj_from_str(struct num_obj *obj, char *str)
 			obj->type = NUM_GROUP;
 			*pos='\0';
 			val = atoi(orig);
+			if(val==0){
+				obj->num_mask = 0xffffffff;
+			}
 			obj->u.group.num[idx] = val;
 			obj->num_mask |= val;
 			idx++;
@@ -157,6 +160,9 @@ static int get_num_obj_from_str(struct num_obj *obj, char *str)
 				obj->type = NUM_SINGLE;
 			}
 			val = atoi(orig);
+			if(val==0){
+				obj->num_mask = 0xffffffff;
+			}
 			obj->u.group.num[idx] = val; // when type is NUM_SIGNLE, it's also ok
 			obj->num_mask |= val;
 		}
@@ -207,10 +213,19 @@ static int get_addr_obj_from_str(struct addr_obj *obj, char *str)
 			}
 			inet_aton(str, &addr);
 			obj->u.net.mask = addr.s_addr;
+			if(addr.s_addr==0){
+				obj->addr_mask = 0xffffffff;
+				break;
+			}
 			pos++;
 			val = atoi(pos);
+			if(val==0){
+				obj->addr_mask = 0xffffffff;
+				break;
+			}
 			masklen2ip(val, &addr);
 			obj->u.net.length = addr.s_addr;
+			obj->addr_mask = obj->u.net.mask|(~obj->u.net.length);
 			break;
 		}else if(*pos=='|'){ // group
 			obj->type = IP_GROUP;
@@ -219,6 +234,9 @@ static int get_addr_obj_from_str(struct addr_obj *obj, char *str)
 				nm_log("Bad ip addr %s.\n", orig);
 			}
 			inet_aton(orig, &addr);
+			if(addr.s_addr==0){
+				obj->addr_mask = 0xffffffff;
+			}
 			obj->u.group.ip_addrs[idx] = addr.s_addr;
 			obj->addr_mask |= addr.s_addr;
 			idx++;
@@ -235,10 +253,16 @@ static int get_addr_obj_from_str(struct addr_obj *obj, char *str)
 				nm_log("Bad ip addr %s.\n", orig);
 			}
 			inet_aton(orig, &addr);
+			if(addr.s_addr==0){
+				obj->addr_mask = 0xffffffff;
+			}
 			obj->u.group.ip_addrs[idx] = addr.s_addr;
 			obj->addr_mask |= addr.s_addr;
 			if(star_num){
 				val = (4-star_num)*8;
+				if(val==0){
+					obj->addr_mask=0xffffffff;
+				}
 				masklen2ip(val, &addr);
 				obj->u.net.length = addr.s_addr;
 			}
@@ -288,7 +312,8 @@ static struct forward_rules *get_forward_rules(struct rte_json *json)
 	for(idx=0;idx<rule_num;idx++){
 		rule_entry = (struct rule_entry *)malloc(sizeof(struct rule_entry));
 		if(NULL==rule_entry){
-			//TODO
+			nm_log("Failed to alloc rule_entry %d.\n", idx);
+			goto out;
 		}
 		memset(rule_entry, 0, sizeof(struct rule_entry));	
 		*(forward_rules->rule_entry+idx)=rule_entry;
@@ -298,7 +323,6 @@ static struct forward_rules *get_forward_rules(struct rte_json *json)
 		rule_entry = *(forward_rules->rule_entry+idx);
 		entry = rte_array_get_item(item, idx);
 		if(NULL==entry){
-			// TODO
 			goto out;
 		}
 
@@ -583,6 +607,10 @@ out:
 static inline int test_match_addr_obj(struct addr_obj *addr_obj, const u32 ip)
 {
 	int i=0;
+	// printf("addr_mask=0x%x, type=%d, ip=0x%x\n", addr_obj->addr_mask, addr_obj->type, ip);
+	if(addr_obj->addr_mask==0xffffffff){
+		return 1;
+	}
 	if(addr_obj->addr_mask && ((addr_obj->addr_mask&ip)!=ip)){
 		return 0;
 	}
@@ -590,16 +618,19 @@ static inline int test_match_addr_obj(struct addr_obj *addr_obj, const u32 ip)
 		case IP_NULL:
 			return 1;
 		case IP_HOST:
+			// printf("IP_HOST: host_ip=0x%x\n", addr_obj->u.host_ip);
 			if((addr_obj->u.host_ip==0)||(addr_obj->u.host_ip==ip)){
 				return 1;
 			}
 			break;
 		case IP_NET_MASK:
+			// printf("IP_NET_MASK: mask=0x%x, len=0x%x\n", addr_obj->u.net.mask, addr_obj->u.net.length);
 			if((addr_obj->u.net.mask & addr_obj->u.net.length)==(ip&addr_obj->u.net.length)){
 				return 1;
 			}
 			break;
 		case IP_RANGE:
+			// printf("IP_RANGE: min=0x%x, max=0x%x\n", addr_obj->u.range.min, addr_obj->u.range.max);
 			if((addr_obj->u.range.min<=ip)&&(addr_obj->u.range.max>=ip)){
 				return 1;
 			}
@@ -621,6 +652,9 @@ static inline int test_match_num_obj(struct num_obj *num_obj, const u32 num)
 {
 	int i=0;
 
+	if(num_obj->num_mask==0xffffffff){
+		return 1;
+	}
 	if(num_obj->num_mask && ((num_obj->num_mask&num)!=num)){
 		return 0;
 	}
@@ -652,11 +686,6 @@ static inline int test_match_num_obj(struct num_obj *num_obj, const u32 num)
 	return 0;
 }
 
-/*
- * return 
- * 	0: permit forward 
- * 	1: drop
- **/
 int get_forward_policy(struct nm_skb *skb)
 {
 	struct list_head *pos;
@@ -679,26 +708,36 @@ int get_forward_policy(struct nm_skb *skb)
 	nm_mutex_lock(&fw_policy_list->mutex);	
 	list_for_each(pos, &fw_policy_list->list){
 		rule_entry = list_entry(pos, struct rule_entry, list);
-		if((rule_entry->rule_not_flag & RULE_NOT_SIP) ^ test_match_addr_obj(&rule_entry->sip, saddr)){
+	#if 0
+		printf("rule: id=%d, forward=%d, conversion=%d rule_not_flag=0x%x, sip=0x%x, dip=0x%x, sport=0x%x, dport=0x%x, proto=%d, vlanid=%d\n",
+			rule_entry->id, rule_entry->forward, rule_entry->conversion, rule_entry->rule_not_flag, saddr, daddr, sport, dport, proto, vlanid);
+	#endif
+		if(!(((rule_entry->rule_not_flag&RULE_NOT_SIP)==RULE_NOT_SIP)^test_match_addr_obj(&rule_entry->sip, saddr))){
+			printf("SIP NOT match.\n");
 			goto not_match;
 		}
-		if((rule_entry->rule_not_flag & RULE_NOT_DIP) ^ test_match_addr_obj(&rule_entry->dip, daddr)){
-			goto not_match;
-		}
-
-		if((rule_entry->rule_not_flag & RULE_NOT_SPORT) ^ test_match_num_obj(&rule_entry->sport, sport)){
-			goto not_match;
-		}
-
-		if((rule_entry->rule_not_flag & RULE_NOT_DPORT) ^ test_match_num_obj(&rule_entry->dport, dport)){
-			goto not_match;
-		}
-
-		if((rule_entry->rule_not_flag & RULE_NOT_PROTO) ^ test_match_num_obj(&rule_entry->proto, proto)){
+		if(!(((rule_entry->rule_not_flag&RULE_NOT_DIP)==RULE_NOT_DIP)^test_match_addr_obj(&rule_entry->dip, daddr))){
+			printf("DIP NOT match.\n");
 			goto not_match;
 		}
 
-		if((rule_entry->rule_not_flag & RULE_NOT_VLANID) ^ test_match_num_obj(&rule_entry->vlanid, vlanid)){
+		if(!(((rule_entry->rule_not_flag&RULE_NOT_SPORT)==RULE_NOT_SPORT)^test_match_num_obj(&rule_entry->sport, sport))){
+			printf("SPORT NOT match.\n");
+			goto not_match;
+		}
+
+		if(!(((rule_entry->rule_not_flag&RULE_NOT_DPORT)==RULE_NOT_DPORT)^test_match_num_obj(&rule_entry->dport, dport))){
+			printf("DPORT NOT match.\n");
+			goto not_match;
+		}
+
+		if(!(((rule_entry->rule_not_flag&RULE_NOT_PROTO)==RULE_NOT_PROTO)^test_match_num_obj(&rule_entry->proto, proto))){
+			printf("PROTO NOT match.\n");
+			goto not_match;
+		}
+
+		if(!(((rule_entry->rule_not_flag&RULE_NOT_VLANID)==RULE_NOT_VLANID)^test_match_num_obj(&rule_entry->vlanid, vlanid))){
+			printf("VLANID NOT match.\n");
 			goto not_match;
 		}
 
@@ -709,6 +748,7 @@ int get_forward_policy(struct nm_skb *skb)
 		if((rule_entry->forward==NM_PKT_FORWARD)&&(rule_entry->conversion)){
 			memcpy(skb->mac.raw, rule_entry->dst_mac, NM_MAC_LEN);
 		}
+
 		return rule_entry->forward;
 	}
 

@@ -97,6 +97,7 @@ int create_listen_socket(void)
 void clean_conn_desc(void)
 {
 	char *policy_buf=NULL;
+	char *report_buf=NULL;
 
 	if(NULL==conn_desc){
 		return;
@@ -108,11 +109,13 @@ void clean_conn_desc(void)
 	}
 
 	if(conn_desc->report_buf){
-		free(conn_desc->report_buf);
+		report_buf = conn_desc->report_buf;
+		memset(report_buf, 0, NM_SEND_BUF_LEN);
 	}
 
 	memset(conn_desc, 0, sizeof(struct conn_desc));
 	conn_desc->policy_buf = policy_buf;
+	conn_desc->report_buf = report_buf;
 	conn_desc->status = VSECPLAT_WAIT_CONNECTING;
 
 	return;
@@ -127,7 +130,7 @@ int vsecplat_report_stats(struct thread *thread)
 	struct list_head *pos=NULL, *tmp=NULL;
 	struct record_json_item *record_json_item=NULL;
 
-	printf("In vsecplat_report_stats\n");
+	// printf("In vsecplat_report_stats\n");
 
 	memset(conn_desc->report_buf, 0, NM_SEND_BUF_LEN);
 	ret= vsecplat_persist_record();

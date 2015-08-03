@@ -303,7 +303,7 @@ int vsecplat_persist_record(void)
 					goto out;
 				}
 				rte_array_add_item(record_json_item->array, item);
-				// entry->count=0;
+				entry->count=0;
 				item_count++;
 				if(item_count>=MAX_REPORT_ITEM){
 					item_count=0;

@@ -99,6 +99,7 @@ int main(void)
 	}
 #endif
 
+#if 1
 	// manage thread 
 	master = thread_master_create();
 	if(NULL==master){
@@ -106,24 +107,21 @@ int main(void)
 		return -1;
 	}
 
-#if 1
 	/* 报告统计数据的线程 */
 	nm_log("Add report stats thread.\n");
 	thread_add_timer(master, vsecplat_report_stats, NULL, global_vsecplat_config->time_interval);
-#endif
 
-#if 1
 	sock = create_listen_socket();
 	if(sock<0){
 		nm_log("failed to create socket.\n");
 		return -1;
 	}
 	thread_add_read(master, vsecplat_listen_func, NULL, sock);
-#endif
 
 	memset(&thread, 0, sizeof(struct thread));
 	while(thread_fetch(master, &thread)){
 		thread_call(&thread);
 	}
+#endif
 	return 0;
 }

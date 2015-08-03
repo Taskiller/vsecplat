@@ -137,7 +137,7 @@ get_next_if:
     skb->len = slot->len;
 
 #if 0
-	printf("recv %s, cur=%d, skb->data = %x %x %x %x %x %x: %x %x %x %x %x %x, %x %x %x %x\n",
+	printf("Recv %s, cur=%d, skb->data = %x %x %x %x %x %x: %x %x %x %x %x %x, %x %x %x %x\n",
 		dev->name, cur,
 		skb->data[0], skb->data[1], skb->data[2],
 		skb->data[3], skb->data[4], skb->data[5],
@@ -178,13 +178,23 @@ int nm_send(struct nm_skb *skb)
 	struct netmap_if *rx_nifp;
 	struct netmap_ring *rx_ring, *tx_ring;
 	struct netmap_slot *rx_slot, *tx_slot;
-	int cur;	
+	int cur;
 
 	struct nm_dev *tx_dev=skb->o_dev;	
 
 	if(tx_dev==NULL){
+		// printf("tx_dev is NULL");
 		return -1;
 	}
+#if 0
+	printf("Send %s, skb->data = %x %x %x %x %x %x: %x %x %x %x %x %x, %x %x %x %x\n",
+		tx_dev->name,
+		skb->data[0], skb->data[1], skb->data[2],
+		skb->data[3], skb->data[4], skb->data[5],
+		skb->data[6], skb->data[7], skb->data[8],
+		skb->data[9], skb->data[10], skb->data[11],
+		skb->data[12], skb->data[13], skb->data[14], skb->data[15]);
+#endif
 
 	if(skb->buf_type==MEMORY_BUF){ // packet buf is system memory
 
