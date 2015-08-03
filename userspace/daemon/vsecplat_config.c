@@ -2,8 +2,8 @@
 #include "nm_log.h"
 #include "vsecplat_config.h"
 
-// #define VSECPLATFORM_CFG_FILE "/mnt/config.json"
-#define VSECPLATFORM_CFG_FILE "./config.json"
+#define VSECPLATFORM_CFG_FILE "/mnt/config.json"
+// #define VSECPLATFORM_CFG_FILE "./config.json"
 struct vsecplat_config *global_vsecplat_config;
 
 

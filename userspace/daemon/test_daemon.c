@@ -138,6 +138,7 @@ int msg_timer_func(struct thread *thread)
 			memset(&serv, 0, sizeof(struct sockaddr_in));
 			serv.sin_family = AF_INET;
 			serv.sin_port = htons(8000);
+			// inet_pton(AF_INET, "192.168.1.140", &serv.sin_addr);
 			inet_pton(AF_INET, "127.0.0.1", &serv.sin_addr);
 			ret = connect(sock, (struct sockaddr *)&serv, sizeof(struct sockaddr_in));
 			if(ret<0){

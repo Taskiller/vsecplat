@@ -68,6 +68,7 @@ int nm_encrypt(unsigned int *val, int len)
 		}
 	}
 }
+
 /*
  * val 为待解密的数据
  * len 为数据长度，单位Byte

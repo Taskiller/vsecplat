@@ -7,5 +7,5 @@
 	],
 	"outport_list":[{"name":"eth3"}],
 	"time_interval":60,
-	"isencrypted":0
+	"isencrypted":1
 }
