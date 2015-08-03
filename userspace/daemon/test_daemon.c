@@ -47,6 +47,7 @@ static int init_policy_buf()
 	close(fd);
 
 	len = nm_encrypt((unsigned int *)policy_msg->data, len);
+
 	policy_msg->len = len + sizeof(struct msg_head);
 	policy_msg->msg_type = NM_MSG_RULES;
 

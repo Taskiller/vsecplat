@@ -1,4 +1,4 @@
-TARGETS := vsecplat test_daemon
+TARGETS := vsecplat test_daemon test_crypt
 
 target_OBJECTS = objs/daemon.o \
 				 objs/thread.o \
@@ -17,6 +17,9 @@ test_daemon_OBJECTS = objs/test_daemon.o \
 				 objs/thread.o \
 				 objs/tea_crypt.o
 
+test_crypt_OBJECTS = objs/test_crypt.o \
+				 objs/tea_crypt.o
+
 CFLAGS = -g -Wall
 CC = gcc
 NM = nm
@@ -33,6 +36,9 @@ vsecplat: $(target_OBJECTS)
 
 test_daemon: $(test_daemon_OBJECTS)
 	$(LINK) $(test_daemon_OBJECTS) $(LIBS) $(LIBS_INCLUDE)
+
+test_crypt: $(test_crypt_OBJECTS)
+	$(LINK) $(test_crypt_OBJECTS) $(LIBS) $(LIBS_INCLUDE)
 
 objs/test_daemon.o:test_daemon.c
 	$(COMPILE) -c -o $@ $<
@@ -71,6 +77,9 @@ objs/tea_crypt.o:tea_crypt.c
 	$(COMPILE) -c -o $@ $<
 
 objs/nm_log.o:nm_log.c
+	$(COMPILE) -c -o $@ $<
+
+objs/test_crypt.o:test_crypt.c
 	$(COMPILE) -c -o $@ $<
 
 clean:
