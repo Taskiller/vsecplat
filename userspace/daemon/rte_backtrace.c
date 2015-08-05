@@ -36,7 +36,7 @@ static void rte_record_backtrace(int sig)
 	bt_size = backtrace(bt, 32);
 	bt_sym = backtrace_symbols(bt, bt_size);
 	for(i=0;i<bt_size;i++){
-		buf_ops += sprintf(buf_ops, "%s\n", bt_sym[i]);
+		buf_ops += sprintf(buf_ops, "%p: %s\n", bt[i], bt_sym[i]);
 	}
 
 	free(bt_sym);

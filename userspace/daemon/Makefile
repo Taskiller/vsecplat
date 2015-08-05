@@ -22,7 +22,7 @@ test_daemon_OBJECTS = objs/test_daemon.o \
 test_crypt_OBJECTS = objs/test_crypt.o \
 				 objs/tea_crypt.o
 
-CFLAGS = -g -Wall
+CFLAGS = -g -Wall -rdynamic
 CC = gcc
 NM = nm
 INCLUDES= -I../include/ -I$(root_dir)/include/
