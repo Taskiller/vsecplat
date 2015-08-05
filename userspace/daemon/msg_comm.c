@@ -214,7 +214,7 @@ int vsecplat_deal_policy(struct thread *thread)
 		nm_log("Failed to create response.\n");
 		goto out;
 	}
-	printf("vsecplat_parse_policy response len=%d, contents:\n%s\n", resp_len+sizeof(struct msg_head), msg->data);
+	printf("vsecplat_parse_policy response len=%ld, contents:\n%s\n", resp_len+sizeof(struct msg_head), msg->data);
 	if(global_vsecplat_config->isencrypted){
 		resp_len = nm_encrypt((unsigned int *)msg->data, resp_len);
 	}

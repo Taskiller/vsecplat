@@ -1,4 +1,5 @@
-TARGETS := vsecplat test_daemon test_crypt
+# TARGETS := vsecplat test_daemon test_crypt
+TARGETS := vsecplat test_daemon
 
 target_OBJECTS = objs/daemon.o \
 				 objs/thread.o \
@@ -11,7 +12,8 @@ target_OBJECTS = objs/daemon.o \
 				 objs/stream.o 	\
 				 objs/packet.o  \
 				 objs/tea_crypt.o \
-				 objs/nm_log.o
+				 objs/nm_log.o \
+				 objs/rte_backtrace.o
 
 test_daemon_OBJECTS = objs/test_daemon.o \
 				 objs/thread.o \
@@ -77,6 +79,9 @@ objs/tea_crypt.o:tea_crypt.c
 	$(COMPILE) -c -o $@ $<
 
 objs/nm_log.o:nm_log.c
+	$(COMPILE) -c -o $@ $<
+
+objs/rte_backtrace.o:rte_backtrace.c
 	$(COMPILE) -c -o $@ $<
 
 objs/test_crypt.o:test_crypt.c

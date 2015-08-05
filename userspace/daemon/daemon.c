@@ -17,6 +17,7 @@
 #include "vsecplat_interface.h"
 #include "vsecplat_policy.h"
 #include "vsecplat_record.h"
+#include "rte_backtrace.h"
 
 struct thread_master *master=NULL;
 int main(void)
@@ -26,6 +27,8 @@ int main(void)
 	int sock;
 
 	pthread_t packet_thread_id;
+
+	rte_backtrace_init();
 
 	ret = nm_log_init();
 	if(ret<0){
