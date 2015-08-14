@@ -118,7 +118,7 @@ int deal_response(struct thread *thread)
 
 	conn_status = SOCKET_WANT_WRITE;
 out:
-	// thread_add_timer(thread->master, msg_timer_func, NULL, 5);
+	thread_add_timer(thread->master, msg_timer_func, NULL, 5);
 	return 0;
 }
 
@@ -138,7 +138,7 @@ int msg_timer_func(struct thread *thread)
 			memset(&serv, 0, sizeof(struct sockaddr_in));
 			serv.sin_family = AF_INET;
 			serv.sin_port = htons(8000);
-			inet_pton(AF_INET, "192.168.1.140", &serv.sin_addr);
+			inet_pton(AF_INET, "192.168.1.146", &serv.sin_addr);
 			// inet_pton(AF_INET, "127.0.0.1", &serv.sin_addr);
 			ret = connect(sock, (struct sockaddr *)&serv, sizeof(struct sockaddr_in));
 			if(ret<0){

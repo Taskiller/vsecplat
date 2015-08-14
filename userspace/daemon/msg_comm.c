@@ -224,6 +224,7 @@ int vsecplat_deal_policy(struct thread *thread)
 		nm_log("Failed to send response.\n");
 	}
 
+out:
 	memset(conn_desc->policy_buf, 0, conn_desc->recv_len);
 	conn_desc->recv_len = 0;
 	conn_desc->recv_ofs = 0;
@@ -233,7 +234,6 @@ int vsecplat_deal_policy(struct thread *thread)
 	return 0;
 #endif
 
-out:
 	thread_add_read(master, vsecplat_deal_policy, NULL, accept_sock);
 	return 0;
 }

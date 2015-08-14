@@ -46,12 +46,6 @@ static void rte_record_backtrace(int sig)
 	}
 	write(fd, buff, buf_ops-buff);
 	close(fd);
-	return;
-}
-
-static void rte_sigsem_exec(int sig)
-{
-	rte_record_backtrace(sig);
 
 	return;
 }
@@ -67,6 +61,21 @@ static void rte_sigsem_int(int sig)
 	sigaction(sig, &sa, NULL);
 	raise(sig);
 	
+	return;
+}
+
+static void rte_sigsem_exec(int sig)
+{
+	struct sigaction action;
+
+	rte_record_backtrace(sig);
+
+	action.sa_handler = SIG_DFL;
+	sigemptyset(&action.sa_mask);
+	action.sa_flags = 0;
+	sigaction(sig, &action, NULL);
+	raise(sig);
+
 	return;
 }
 

@@ -454,6 +454,9 @@ int create_policy_response(char *buf, int result, int report_state)
 	int len;
 	struct rte_json *root=NULL;
 	struct rte_json *item=NULL;
+
+	nm_log("In create_policy_response.\n");
+
 	root = new_json_item();
 	if(NULL==root){
 		return -1;
@@ -564,8 +567,14 @@ int vsecplat_parse_policy(const char *buf)
 		return -1;
 	}
 
+	if(json->type != JSON_OBJECT){
+		nm_log("Policy json format is wrong\n");
+		return -1;
+	}
+
 	item = rte_object_get_item(json, "action");
 	if(NULL==item){
+		nm_log("Failed to get action item.\n");
 		goto out;
 	}
 	
