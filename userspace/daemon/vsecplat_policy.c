@@ -307,6 +307,7 @@ static struct forward_rules *get_forward_rules(struct rte_json *json)
 		free(forward_rules);
 		return NULL;
 	}
+
 	memset((void *)forward_rules->rule_entry, 0, rule_num*sizeof(void *));
 
 	for(idx=0;idx<rule_num;idx++){
@@ -434,8 +435,9 @@ static struct forward_rules *get_forward_rules(struct rte_json *json)
 
 out:
 	for(idx=0;idx<forward_rules->rule_num;idx++){
-		if(*(forward_rules->rule_entry+idx)!=NULL){
-			free(forward_rules->rule_entry);
+		rule_entry = *(forward_rules->rule_entry + idx);
+		if(NULL!=rule_entry){
+			free(rule_entry);
 		}
 	}
 	free(forward_rules);
