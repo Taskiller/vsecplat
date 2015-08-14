@@ -455,7 +455,7 @@ int create_policy_response(char *buf, int result, int report_state)
 	struct rte_json *root=NULL;
 	struct rte_json *item=NULL;
 
-	nm_log("In create_policy_response.\n");
+	// printf("In create_policy_response.\n");
 
 	root = new_json_item();
 	if(NULL==root){

@@ -116,9 +116,9 @@ int deal_response(struct thread *thread)
 	// nm_decrypt((unsigned int *)msg->data, len);
 	printf("response: type=%d, len=%d, data=%s\n", msg->msg_type, msg->len, msg->data);
 
-	conn_status = SOCKET_WANT_WRITE;
+	// conn_status = SOCKET_WANT_WRITE;
 out:
-	thread_add_timer(thread->master, msg_timer_func, NULL, 5);
+	// thread_add_timer(thread->master, msg_timer_func, NULL, 5);
 	return 0;
 }
 

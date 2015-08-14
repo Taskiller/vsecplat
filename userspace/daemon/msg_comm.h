@@ -3,26 +3,23 @@
 
 #include "thread.h"
 
-enum{
-	VSECPLAT_WAIT_CONNECTING=0,
-	VSECPLAT_CONNECT_OK,
-	VSECPLAT_RUNNING,
-	VSECPLAT_STATUS_MAX
-};
-
-struct conn_desc{
-	int report_sock;
-	struct sockaddr_in serv_addr;
-	int status;	
-	
+struct policy_conn_desc{
 	int recv_len;
 	int recv_ofs;
-	int send_len;
-	int send_ofs;
-	
+
 	char *policy_buf;
+};
+
+struct report_conn_desc{
+	int report_sock;
+	struct sockaddr_in serv_addr;
+
+	int send_len;
+
 	char *report_buf;
 };
+
+
 
 enum{
 	NM_MSG_RULES=1,
