@@ -56,7 +56,7 @@ static int nm_vlan_recv(struct nm_skb *skb)
 	
 	nm_skb_pull(skb, VLAN_ETH_HLEN);
 	if(ntohs(skb->protocol)==ETH_P_IP){
-		ret = nm_ipv4_recv(skb);	
+		ret = nm_ipv4_recv(skb);
 	}else if(ntohs(skb->protocol)==ETH_P_ARP){
 		ret = nm_arp_recv(skb);	
 	}
@@ -69,22 +69,28 @@ static int packet_intercept(struct nm_skb *skb)
 	int ret=NM_PKT_DROP;
 	skb->mac.raw = skb->data;
 
-	eth_type_trans(skb);
-	switch(ntohs(skb->protocol)){
-		case ETH_P_IP:
-			ret = nm_ipv4_recv(skb);	
-			break;
-		case ETH_P_8021Q:
-			ret = nm_vlan_recv(skb);
-			break;
-		case ETH_P_ARP:
-			ret = nm_arp_recv(skb);
-			break;
-		default:
-			break;
+	/* mirror_state==0, stop forward and stop report */
+	if((1==global_vsecplat_config->mirror_state) &&
+		(1==global_vsecplat_config->guide_state)){
+		eth_type_trans(skb);
+		switch(ntohs(skb->protocol)){
+			case ETH_P_IP:
+				ret = nm_ipv4_recv(skb);
+				break;
+			case ETH_P_8021Q:
+				ret = nm_vlan_recv(skb);
+				break;
+			case ETH_P_ARP:
+				ret = nm_arp_recv(skb);
+				break;
+			default:
+				break;
+		}
 	}
 
-	vsecplat_record_pkt(skb);
+	if(1==global_vsecplat_config->guide_state){
+		vsecplat_record_pkt(skb);
+	}
 
 	return ret;
 }

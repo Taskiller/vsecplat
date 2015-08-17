@@ -6,7 +6,6 @@
 // #define VSECPLATFORM_CFG_FILE "./config.json"
 struct vsecplat_config *global_vsecplat_config;
 
-
 int parse_vsecplat_config(void)
 {
 	int fd=0;
@@ -50,6 +49,8 @@ int parse_vsecplat_config(void)
 	}
 	memset(global_vsecplat_config, 0, sizeof(struct vsecplat_config));
 	global_vsecplat_config->time_interval = VSECPLAT_REPORT_INTERVAL;
+	global_vsecplat_config->mirror_state = 1;
+	global_vsecplat_config->guide_state = 1;
 
 	json = rte_parse_json(file_buf);
 	if(NULL==json){

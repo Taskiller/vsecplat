@@ -88,7 +88,11 @@ struct forward_rules{
 enum{
 	NM_ADD_RULES=1,
 	NM_DEL_RULES,
-	NM_CHECK_RULES  // Maybe no use
+	NM_CHECK_RULES,  // Maybe no use
+	NM_DISABLE_MIRROR, // Stop report and forward
+	NM_ENABLE_MIRROR,
+	NM_DISABLE_GUIDE, // Stop forward
+	NM_ENABLE_GUIDE
 };
 struct forward_rules_head{
 	struct list_head list;

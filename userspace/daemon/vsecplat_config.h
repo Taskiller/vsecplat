@@ -33,6 +33,8 @@ struct vsecplat_config{
 	struct outport_desc *outport_desc_array;
 	int time_interval;
 	int isencrypted;
+	int mirror_state;
+	int guide_state;
 };
 
 #define VSECPLAT_REPORT_INTERVAL 60 // 每隔60秒报告一次统计信息

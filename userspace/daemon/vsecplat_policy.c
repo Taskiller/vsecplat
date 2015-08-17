@@ -3,6 +3,7 @@
 #include "nm_type.h"
 #include "nm_skb.h"
 #include "nm_log.h"
+#include  "vsecplat_config.h"
 #include  "vsecplat_policy.h"
 
 static inline int str_to_mac(const char *bufp, unsigned char *ptr)
@@ -481,6 +482,24 @@ int create_policy_response(char *buf, int result, int report_state)
 	item->u.val_int = report_state;
 	rte_object_add_item(root, "report_state", item);
 
+	item = new_json_item();
+	if(NULL==item){
+		rte_destroy_json(root);
+		return -1;
+	}
+	item->type = JSON_INTEGER;
+	item->u.val_int = 0;
+	rte_object_add_item(root, "mirror_state", item);
+
+	item = new_json_item();
+	if(NULL==item){
+		rte_destroy_json(root);
+		return -1;
+	}
+	item->type = JSON_INTEGER;
+	item->u.val_int = 0;
+	rte_object_add_item(root, "guide_state", item);
+
 	len = rte_persist_json(buf, root, JSON_WITHOUT_FORMAT);
 	if(len<=0){
 		rte_destroy_json(root);
@@ -582,11 +601,35 @@ int vsecplat_parse_policy(const char *buf)
 		goto out;
 	}
 	action = item->u.val_int;
-
+	switch(action){
+		case NM_CHECK_RULES:
+			rte_destroy_json(json);
+			return 0;
+		case NM_DISABLE_MIRROR:
+			rte_destroy_json(json);
+			global_vsecplat_config->mirror_state=0;
+			return 0;
+		case NM_ENABLE_MIRROR:
+			rte_destroy_json(json);
+			global_vsecplat_config->mirror_state=1;
+			return 0;
+		case NM_DISABLE_GUIDE:
+			rte_destroy_json(json);
+			global_vsecplat_config->guide_state=0;
+			return 0;
+		case NM_ENABLE_GUIDE:
+			rte_destroy_json(json);
+			global_vsecplat_config->guide_state=1;
+			return 0;
+		default:
+			break;
+	}
+#if 0
 	if(action==NM_CHECK_RULES){
 		rte_destroy_json(json);
 		return 0;
 	}
+#endif
 	forward_rules = get_forward_rules(json);		
 	if(NULL==forward_rules){
 		rte_destroy_json(json);
