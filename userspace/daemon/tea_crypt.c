@@ -48,6 +48,8 @@ static void tea_decrypt(unsigned int *val, unsigned int *key)
 }
 #endif
 
+#define rte_align(d, a) (((d)+(a-1)) & ~(a-1))
+
 /*
  * val 为待加密的数据
  * len 为数据长度，单位Byte
@@ -56,7 +58,7 @@ int nm_encrypt(unsigned int *val, int len)
 {
 	int i=0;
 #if defined(NM_TEA_CRYPT)
-	int crypt_len = ((len&7)?(len+8-(len&7)):len)/sizeof(unsigned int);
+	int crypt_len = (rte_align(len, 8))/sizeof(unsigned int);
 	for(i=0;i<crypt_len;i+=2){
 		tea_encrypt(val+i, tea_key);
 	}
