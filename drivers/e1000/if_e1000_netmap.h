@@ -95,6 +95,7 @@ e1000_netmap_txsync(struct netmap_kring *kring, int flags)
 	/* device-specific */
 	struct SOFTC_T *adapter = netdev_priv(ifp);
 	struct e1000_tx_ring* txr = &adapter->tx_ring[ring_nr];
+    unsigned int total_bytes=0, total_packets=0;
 
 	rmb();
 	/*
@@ -135,6 +136,8 @@ e1000_netmap_txsync(struct netmap_kring *kring, int flags)
 			curr->lower.data = htole32(adapter->txd_cmd |
 				len | flags |
 				E1000_TXD_CMD_EOP | E1000_TXD_CMD_IFCS);
+			total_bytes += len;
+			total_packets++;
 			nm_i = nm_next(nm_i, lim);
 			nic_i = nm_next(nic_i, lim);
 		}
@@ -146,6 +149,11 @@ e1000_netmap_txsync(struct netmap_kring *kring, int flags)
 		writel(nic_i, adapter->hw.hw_addr + txr->tdt);
 		mmiowb(); // XXX where do we need this ?
 	}
+
+	adapter->total_tx_packets += total_packets;
+	adapter->total_tx_bytes += total_bytes;
+	ifp->stats.tx_bytes += total_bytes;
+	ifp->stats.tx_packets += total_packets;
 
 	/*
 	 * Second part: reclaim buffers for completed transmissions.
@@ -186,6 +194,7 @@ e1000_netmap_rxsync(struct netmap_kring *kring, int flags)
 	/* device-specific */
 	struct SOFTC_T *adapter = netdev_priv(ifp);
 	struct e1000_rx_ring *rxr = &adapter->rx_ring[ring_nr];
+    unsigned int total_bytes=0, total_packets=0;
 
 	if (!netif_carrier_ok(ifp)) {
 		goto out;
@@ -213,12 +222,19 @@ e1000_netmap_rxsync(struct netmap_kring *kring, int flags)
 				break;
 			ring->slot[nm_i].len = le16toh(curr->length) - 4;
 			ring->slot[nm_i].flags = slot_flags;
+			total_bytes += ring->slot[nm_i].len;
+			total_packets++;
 			nm_i = nm_next(nm_i, lim);
 			nic_i = nm_next(nic_i, lim);
 		}
 		if (n) { /* update the state variables */
 			rxr->next_to_clean = nic_i;
 			kring->nr_hwtail = nm_i;
+
+			adapter->total_rx_packets += total_packets;
+			adapter->total_rx_bytes += total_bytes;
+			ifp->stats.rx_bytes += total_bytes;
+			ifp->stats.rx_packets += total_packets;
 		}
 		kring->nr_kflags &= ~NKR_PENDINTR;
 	}

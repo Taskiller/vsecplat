@@ -1,1 +1,1 @@
-{"action":1,"forward_rules":[{"id":0,"dip":"192.168.0.252","vlanid":"0","sip":"192.168.0.251","forward":1,"dport":"0","sport":"0","proto":"0"}]}
+{"action":1,"forward_rules":[{"id":0,"dip":"0.0.0.0","vlanid":"0","sip":"0.0.0.0","forward":1,"dport":"0","sport":"0","proto":"0"}]}

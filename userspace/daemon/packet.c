@@ -70,27 +70,32 @@ static int packet_intercept(struct nm_skb *skb)
 	skb->mac.raw = skb->data;
 
 	/* mirror_state==0, stop forward and stop report */
-	if((1==global_vsecplat_config->mirror_state) &&
-		(1==global_vsecplat_config->guide_state)){
-		eth_type_trans(skb);
-		switch(ntohs(skb->protocol)){
-			case ETH_P_IP:
-				ret = nm_ipv4_recv(skb);
-				break;
-			case ETH_P_8021Q:
-				ret = nm_vlan_recv(skb);
-				break;
-			case ETH_P_ARP:
-				ret = nm_arp_recv(skb);
-				break;
-			default:
-				break;
-		}
+	if(0==global_vsecplat_config->mirror_state){
+		return NM_PKT_DROP;
 	}
 
-	if(1==global_vsecplat_config->guide_state){
-		vsecplat_record_pkt(skb);
+	/* guide_state==0, stop forward */
+	if(0==global_vsecplat_config->guide_state){
+		goto report_only;
 	}
+
+	eth_type_trans(skb);
+	switch(ntohs(skb->protocol)){
+		case ETH_P_IP:
+			ret = nm_ipv4_recv(skb);
+			break;
+		case ETH_P_8021Q:
+			ret = nm_vlan_recv(skb);
+			break;
+		case ETH_P_ARP:
+			ret = nm_arp_recv(skb);
+			break;
+		default:
+			break;
+	}
+
+report_only:
+	vsecplat_record_pkt(skb);
 
 	return ret;
 }
