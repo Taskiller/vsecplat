@@ -179,7 +179,7 @@ int setup_dp_interfaces(void)
 			// TODO
 			return -1;
 		}
-		nm_registe_dev(dev);
+		// nm_registe_dev(dev);
 		global_vsecplat_config->outport_desc_array[idx].dev = dev;
 	}
 
