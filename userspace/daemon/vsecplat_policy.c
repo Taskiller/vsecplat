@@ -768,31 +768,37 @@ int get_forward_policy(struct nm_skb *skb)
 	#endif
 		if(!(((rule_entry->rule_not_flag&RULE_NOT_SIP)==RULE_NOT_SIP)^test_match_addr_obj(&rule_entry->sip, saddr))){
 			printf("SIP NOT match.\n");
-			goto not_match;
+			// goto not_match;
+			continue;
 		}
 		if(!(((rule_entry->rule_not_flag&RULE_NOT_DIP)==RULE_NOT_DIP)^test_match_addr_obj(&rule_entry->dip, daddr))){
 			printf("DIP NOT match.\n");
-			goto not_match;
+			// goto not_match;
+			continue;
 		}
 
 		if(!(((rule_entry->rule_not_flag&RULE_NOT_SPORT)==RULE_NOT_SPORT)^test_match_num_obj(&rule_entry->sport, sport))){
 			printf("SPORT NOT match.\n");
-			goto not_match;
+			// goto not_match;
+			continue;
 		}
 
 		if(!(((rule_entry->rule_not_flag&RULE_NOT_DPORT)==RULE_NOT_DPORT)^test_match_num_obj(&rule_entry->dport, dport))){
 			printf("DPORT NOT match.\n");
-			goto not_match;
+			// goto not_match;
+			continue;
 		}
 
 		if(!(((rule_entry->rule_not_flag&RULE_NOT_PROTO)==RULE_NOT_PROTO)^test_match_num_obj(&rule_entry->proto, proto))){
 			printf("PROTO NOT match.\n");
-			goto not_match;
+			// goto not_match;
+			continue;
 		}
 
 		if(!(((rule_entry->rule_not_flag&RULE_NOT_VLANID)==RULE_NOT_VLANID)^test_match_num_obj(&rule_entry->vlanid, vlanid))){
 			printf("VLANID NOT match.\n");
-			goto not_match;
+			// goto not_match;
+			continue;
 		}
 
 		// reach here, the packet match the policy
@@ -806,7 +812,7 @@ int get_forward_policy(struct nm_skb *skb)
 		return rule_entry->forward;
 	}
 
-not_match:
+// not_match:
 	nm_mutex_unlock(&fw_policy_list->mutex);	
 	return NM_PKT_DROP;
 }
