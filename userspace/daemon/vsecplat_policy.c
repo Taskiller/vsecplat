@@ -274,7 +274,27 @@ static int get_addr_obj_from_str(struct addr_obj *obj, char *str)
 	return ret;
 }
 
-static struct forward_rules *get_forward_rules(struct rte_json *json)
+static char *persist_policy_entry(struct rte_json *json)
+{
+	char *txt_buf=NULL;
+	int len=0;
+
+	txt_buf = (char *)malloc(512*sizeof(char));
+	if(NULL==txt_buf){
+		printf("Failed to alloc text buffer.\n");
+		return NULL;
+	}
+
+	len = rte_persist_json(txt_buf, json, JSON_WITHOUT_FORMAT);
+	if(len<0){
+		free(txt_buf);
+		return NULL;
+	}
+
+	return txt_buf;
+}
+
+static struct forward_rules *parse_forward_rules(struct rte_json *json)
 {
 	struct forward_rules *forward_rules=NULL;
 	struct rule_entry *rule_entry=NULL;
@@ -327,6 +347,7 @@ static struct forward_rules *get_forward_rules(struct rte_json *json)
 		if(NULL==entry){
 			goto out;
 		}
+
 
 		tmp = rte_object_get_item(entry, "id");
 		if(NULL!=tmp){
@@ -431,6 +452,13 @@ static struct forward_rules *get_forward_rules(struct rte_json *json)
 				rule_entry->forward = NM_PKT_FORWARD;
 			}
 		}
+
+		rule_entry->json_txt = persist_policy_entry(entry);
+	#if 0
+		if(NULL!=rule_entry->json_txt){
+			printf("rule_entry->json_txt = %s\n", rule_entry->json_txt);
+		}
+	#endif
 	}
 	return forward_rules;
 
@@ -523,6 +551,9 @@ static int vsecplat_clear_policy(struct forward_rules *forward_rules)
 			pos_entry = list_entry(pos, struct rule_entry, list);
 			if(rule_entry->id == pos_entry->id){
 				list_del(pos);
+				if(NULL!=pos_entry->json_txt){
+					free(pos_entry->json_txt);
+				}
 				free(pos_entry);
 			}
 		}
@@ -544,6 +575,9 @@ static int vsecplat_del_policy(struct forward_rules *forward_rules)
 			pos_entry = list_entry(pos, struct rule_entry, list);
 			if(rule_entry->id == pos_entry->id){
 				list_del(pos);
+				if(NULL!=pos_entry->json_txt){
+					free(pos_entry->json_txt);
+				}
 				free(pos_entry);
 			}
 		}
@@ -572,6 +606,35 @@ static int vsecplat_add_policy(struct forward_rules *forward_rules)
 	nm_mutex_unlock(&fw_policy_list->mutex);	
 	return 0;
 }
+
+static void vsecplat_store_policy(void)
+{
+	struct list_head *head=NULL, *pos=NULL;
+	struct rule_entry *rule_entry=NULL;
+
+	FILE *file=NULL;
+	file = fopen(VSECPLAT_POLICY_FILE, "w");
+	if(NULL==file){
+		printf("Failed to open %s\n", VSECPLAT_POLICY_FILE);
+		return;
+	}
+	fprintf(file, "{\"action\":1,\"forward_rules\":[");
+	nm_mutex_lock(&fw_policy_list->mutex);
+	head = &fw_policy_list->list;
+	list_for_each(pos, head){
+		rule_entry = list_entry(pos, struct rule_entry, list);
+		fprintf(file, "%s", rule_entry->json_txt);
+		if(pos->next!=head){
+			fprintf(file, ",");
+		}
+	}
+	nm_mutex_unlock(&fw_policy_list->mutex);
+	fprintf(file, "]}");
+
+	fclose(file);
+	return;
+}
+
 
 int vsecplat_parse_policy(const char *buf)
 {
@@ -630,7 +693,7 @@ int vsecplat_parse_policy(const char *buf)
 		return 0;
 	}
 #endif
-	forward_rules = get_forward_rules(json);		
+	forward_rules = parse_forward_rules(json);
 	if(NULL==forward_rules){
 		rte_destroy_json(json);
 		return -1;
@@ -648,12 +711,16 @@ int vsecplat_parse_policy(const char *buf)
 
 	free(forward_rules);
 	rte_destroy_json(json);
+	if(0==ret){
+		vsecplat_store_policy();
+	}
 
 	return ret;
 out:
 	rte_destroy_json(json);
 	return -1;
 }
+
 
 /*
  * if match return 1, otherwise return 0 
@@ -767,37 +834,31 @@ int get_forward_policy(struct nm_skb *skb)
 			rule_entry->id, rule_entry->forward, rule_entry->conversion, rule_entry->rule_not_flag, saddr, daddr, sport, dport, proto, vlanid);
 	#endif
 		if(!(((rule_entry->rule_not_flag&RULE_NOT_SIP)==RULE_NOT_SIP)^test_match_addr_obj(&rule_entry->sip, saddr))){
-			printf("SIP NOT match.\n");
-			// goto not_match;
+			// printf("SIP NOT match.\n");
 			continue;
 		}
 		if(!(((rule_entry->rule_not_flag&RULE_NOT_DIP)==RULE_NOT_DIP)^test_match_addr_obj(&rule_entry->dip, daddr))){
-			printf("DIP NOT match.\n");
-			// goto not_match;
+			// printf("DIP NOT match.\n");
 			continue;
 		}
 
 		if(!(((rule_entry->rule_not_flag&RULE_NOT_SPORT)==RULE_NOT_SPORT)^test_match_num_obj(&rule_entry->sport, sport))){
-			printf("SPORT NOT match.\n");
-			// goto not_match;
+			// printf("SPORT NOT match.\n");
 			continue;
 		}
 
 		if(!(((rule_entry->rule_not_flag&RULE_NOT_DPORT)==RULE_NOT_DPORT)^test_match_num_obj(&rule_entry->dport, dport))){
-			printf("DPORT NOT match.\n");
-			// goto not_match;
+			// printf("DPORT NOT match.\n");
 			continue;
 		}
 
 		if(!(((rule_entry->rule_not_flag&RULE_NOT_PROTO)==RULE_NOT_PROTO)^test_match_num_obj(&rule_entry->proto, proto))){
-			printf("PROTO NOT match.\n");
-			// goto not_match;
+			// printf("PROTO NOT match.\n");
 			continue;
 		}
 
 		if(!(((rule_entry->rule_not_flag&RULE_NOT_VLANID)==RULE_NOT_VLANID)^test_match_num_obj(&rule_entry->vlanid, vlanid))){
-			printf("VLANID NOT match.\n");
-			// goto not_match;
+			// printf("VLANID NOT match.\n");
 			continue;
 		}
 
@@ -812,7 +873,6 @@ int get_forward_policy(struct nm_skb *skb)
 		return rule_entry->forward;
 	}
 
-// not_match:
 	nm_mutex_unlock(&fw_policy_list->mutex);	
 	return NM_PKT_DROP;
 }
@@ -830,6 +890,41 @@ int init_policy_list(void)
 	return 0;
 }
 
+int vsecplat_load_policy(void)
+{
+	int fd=0;
+	int len=0;
+	struct stat stat_buf;
+	char *file_buf=NULL;
+
+	if(access(VSECPLAT_POLICY_FILE, F_OK)){
+		return 0; // file not exist
+	}
+
+	memset(&stat_buf, 0, sizeof(struct stat));
+	stat(VSECPLAT_POLICY_FILE, &stat_buf);
+	len = stat_buf.st_size;
+
+	file_buf = malloc(len);
+	if(NULL==file_buf){
+		printf("Failed to malloc buffer for loading policy.\n");
+		return -1;
+	}
+	memset(file_buf, 0, len);
+	fd = open(VSECPLAT_POLICY_FILE, O_RDONLY);
+	if(fd<0){
+		free(file_buf);
+		return -1;
+	}
+	read(fd, file_buf, len);
+	close(fd);
+
+	vsecplat_parse_policy(file_buf);
+	free(file_buf);
+	return 0;
+}
+
+#if 0
 int add_test_policy(void)
 {
 	int fd=0;
@@ -858,3 +953,4 @@ int add_test_policy(void)
 	free(file_buf);
 	return 0;
 }
+#endif

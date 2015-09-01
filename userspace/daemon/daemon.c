@@ -87,9 +87,14 @@ int main(void)
 		return -1;
 	}
 
+	ret = vsecplat_load_policy();
+	if(ret<0){
+		printf("Failed to load policy.\n");
+		return -1;
+	}
+
 #if 0 // For test
 	vsecplat_test_record();
-	add_test_policy();
 	packet_handle_thread(NULL);
 #endif
 

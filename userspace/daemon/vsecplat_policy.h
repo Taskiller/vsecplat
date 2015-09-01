@@ -78,6 +78,7 @@ struct rule_entry{
 	struct num_obj dport;
 	struct num_obj proto;
 	struct num_obj vlanid;
+	char *json_txt;
 };
 
 struct forward_rules{
@@ -100,10 +101,12 @@ struct forward_rules_head{
 	struct nm_mutex mutex;
 };
 
+#define VSECPLAT_POLICY_FILE "/mnt/rules.json"
+
 int init_policy_list(void);
 int vsecplat_parse_policy(const char *buf);
 int get_forward_policy(struct nm_skb *skb);
 int create_policy_response(char *buf, int result, int report_state);
-
-int add_test_policy(void);
+int vsecplat_load_policy(void);
+// int add_test_policy(void);
 #endif
