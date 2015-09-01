@@ -4,6 +4,7 @@
 
 struct nm_dev{
 	char name[NM_NAME_LEN];
+	char mac[NM_MAC_LEN];
 	int fd;
 	struct netmap_if *nifp;
 	int first_tx_ring, last_tx_ring, cur_tx_ring;

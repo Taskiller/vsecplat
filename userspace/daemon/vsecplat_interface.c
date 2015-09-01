@@ -164,6 +164,7 @@ int setup_dp_interfaces(void)
 			// TODO
 			return -1;
 		}
+		memcpy(dev->mac, ifp->mac, NM_MAC_LEN);
 		nm_registe_dev(dev);
 		global_vsecplat_config->inport_desc_array[idx].dev = dev;
 	}
@@ -179,6 +180,7 @@ int setup_dp_interfaces(void)
 			// TODO
 			return -1;
 		}
+		memcpy(dev->mac, ifp->mac, NM_MAC_LEN);
 		// nm_registe_dev(dev);
 		global_vsecplat_config->outport_desc_array[idx].dev = dev;
 	}

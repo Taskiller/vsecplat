@@ -106,6 +106,7 @@ static int packet_send(struct nm_skb *skb)
 		skb->o_dev = nm_get_output_dev(); 
 	}
 
+	memcpy(skb->mac.raw+NM_MAC_LEN, skb->o_dev->mac, NM_MAC_LEN);
 	nm_send(skb);
 	return 0;
 }
