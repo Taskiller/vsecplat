@@ -10,9 +10,9 @@ struct record_entry{
 	struct list_head list;
 	u32 sip;
 	u32 dip;
-	u32 sport;
-	u32 dport;
-	u32 proto;
+	u16 sport;
+	u16 dport;
+	u8 proto;
 	u16 vlanid;
 	u64 count;
 	u64 packetsize;

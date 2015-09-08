@@ -769,7 +769,7 @@ static inline int test_match_addr_obj(struct addr_obj *addr_obj, const u32 ip)
 	return 0;
 }
 
-static inline int test_match_num_obj(struct num_obj *num_obj, const u32 num)
+static inline int test_match_num_obj(struct num_obj *num_obj, u32 num)
 {
 	int i=0;
 
@@ -811,28 +811,25 @@ int get_forward_policy(struct nm_skb *skb)
 {
 	struct list_head *pos;
 	struct rule_entry *rule_entry=NULL;
-	
 	u32 saddr=0,daddr=0;
 	u16 sport=0,dport=0,proto=0,vlanid=0;	
 
 	saddr = skb->nh.iph->saddr;
 	daddr = skb->nh.iph->daddr;
 	proto = skb->nh.iph->protocol;
-	vlanid = skb->vlanid;
-	if(proto==6){ // UDP
-		sport = skb->h.uh->source;
-		dport = skb->h.uh->dest;
-	}else if(proto==17){ // TCP
-		sport = skb->h.th->source;
-		dport = skb->h.th->dest;
+	vlanid = ntohs(skb->vlanid);
+
+	if(proto==IPPROTO_UDP){ // UDP
+		sport = ntohs(skb->h.uh->source);
+		dport = ntohs(skb->h.uh->dest);
+	}else if(proto==IPPROTO_TCP){ // TCP
+		sport = ntohs(skb->h.th->source);
+		dport = ntohs(skb->h.th->dest);
 	}
+
 	nm_mutex_lock(&fw_policy_list->mutex);	
 	list_for_each(pos, &fw_policy_list->list){
 		rule_entry = list_entry(pos, struct rule_entry, list);
-	#if 0
-		printf("rule: id=%d, forward=%d, conversion=%d rule_not_flag=0x%x, sip=0x%x, dip=0x%x, sport=0x%x, dport=0x%x, proto=%d, vlanid=%d\n",
-			rule_entry->id, rule_entry->forward, rule_entry->conversion, rule_entry->rule_not_flag, saddr, daddr, sport, dport, proto, vlanid);
-	#endif
 		if(!(((rule_entry->rule_not_flag&RULE_NOT_SIP)==RULE_NOT_SIP)^test_match_addr_obj(&rule_entry->sip, saddr))){
 			// printf("SIP NOT match.\n");
 			continue;
@@ -843,12 +840,12 @@ int get_forward_policy(struct nm_skb *skb)
 		}
 
 		if(!(((rule_entry->rule_not_flag&RULE_NOT_SPORT)==RULE_NOT_SPORT)^test_match_num_obj(&rule_entry->sport, sport))){
-			// printf("SPORT NOT match.\n");
+			// printf("SPORT NOT match. rule_entry->sport: mask=%d, num=%d, sport=%d\n", rule_entry->sport.num_mask, rule_entry->sport.u.num, sport);
 			continue;
 		}
 
 		if(!(((rule_entry->rule_not_flag&RULE_NOT_DPORT)==RULE_NOT_DPORT)^test_match_num_obj(&rule_entry->dport, dport))){
-			// printf("DPORT NOT match.\n");
+			// printf("DPORT NOT match. rule_entry->dport: mask=%d, num=%d, dport=%d\n", rule_entry->dport.num_mask, rule_entry->dport.u.num, dport);
 			continue;
 		}
 

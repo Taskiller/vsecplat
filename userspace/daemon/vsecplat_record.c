@@ -80,10 +80,10 @@ int vsecplat_record_pkt(struct nm_skb *skb)
 	entry.sip = skb->nh.iph->saddr;
 	entry.dip = skb->nh.iph->daddr;
 	entry.proto = skb->nh.iph->protocol;
-	if(entry.proto==6){
+	if(entry.proto==IPPROTO_UDP){
 		entry.sport = skb->h.uh->source;
 		entry.dport = skb->h.uh->dest;
-	}else if(entry.proto==17){
+	}else if(entry.proto==IPPROTO_TCP){
 		entry.sport = skb->h.th->source;
 		entry.dport = skb->h.th->dest;
 	}
@@ -163,7 +163,7 @@ static struct rte_json *record_entry_to_json(struct record_entry *entry)
 		return NULL;
 	}
 	item->type = JSON_INTEGER;
-	item->u.val_int = entry->sport;
+	item->u.val_int = ntohs(entry->sport);
 	rte_object_add_item(obj, "sport", item);
 
 	item = new_json_item();
@@ -172,7 +172,7 @@ static struct rte_json *record_entry_to_json(struct record_entry *entry)
 		return NULL;
 	}
 	item->type = JSON_INTEGER;
-	item->u.val_int = entry->dport;
+	item->u.val_int = ntohs(entry->dport);
 	rte_object_add_item(obj, "dport", item);
 
 	item = new_json_item();
@@ -190,7 +190,7 @@ static struct rte_json *record_entry_to_json(struct record_entry *entry)
 		return NULL;
 	}
 	item->type = JSON_INTEGER;
-	item->u.val_int = entry->vlanid;
+	item->u.val_int = ntohs(entry->vlanid);
 	rte_object_add_item(obj, "vlanid", item);
 
 	item = new_json_item();

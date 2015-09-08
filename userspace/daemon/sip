@@ -1,0 +1,54 @@
+vsecplat_policy.c:357:			rule_entry->id = tmp->u.val_int;
+vsecplat_policy.c:365:			not_flag=get_addr_obj_from_str(&(rule_entry->sip), tmp->u.val_str);
+vsecplat_policy.c:367:				rule_entry->rule_not_flag |= RULE_NOT_SIP;
+vsecplat_policy.c:376:			not_flag = get_addr_obj_from_str(&(rule_entry->dip), tmp->u.val_str);
+vsecplat_policy.c:378:				rule_entry->rule_not_flag |= RULE_NOT_DIP;
+vsecplat_policy.c:387:			not_flag = get_num_obj_from_str(&(rule_entry->sport), tmp->u.val_str);
+vsecplat_policy.c:389:				rule_entry->rule_not_flag |= RULE_NOT_SPORT;
+vsecplat_policy.c:398:			not_flag = get_num_obj_from_str(&(rule_entry->dport), tmp->u.val_str);
+vsecplat_policy.c:400:				rule_entry->rule_not_flag |= RULE_NOT_DPORT;
+vsecplat_policy.c:409:			not_flag = get_num_obj_from_str(&(rule_entry->proto), tmp->u.val_str);
+vsecplat_policy.c:411:				rule_entry->rule_not_flag |= RULE_NOT_PROTO;
+vsecplat_policy.c:420:			not_flag = get_num_obj_from_str(&(rule_entry->vlanid), tmp->u.val_str);
+vsecplat_policy.c:422:				rule_entry->rule_not_flag |= RULE_NOT_VLANID;
+vsecplat_policy.c:431:			rule_entry->conversion = tmp->u.val_int;
+vsecplat_policy.c:434:		if(rule_entry->conversion){
+vsecplat_policy.c:440:				str_to_mac(tmp->u.val_str, rule_entry->dst_mac);
+vsecplat_policy.c:450:				rule_entry->forward = NM_PKT_DROP;
+vsecplat_policy.c:452:				rule_entry->forward = NM_PKT_FORWARD;
+vsecplat_policy.c:456:		rule_entry->json_txt = persist_policy_entry(entry);
+vsecplat_policy.c:458:		if(NULL!=rule_entry->json_txt){
+vsecplat_policy.c:459:			printf("rule_entry->json_txt = %s\n", rule_entry->json_txt);
+vsecplat_policy.c:552:			if(rule_entry->id == pos_entry->id){
+vsecplat_policy.c:554:				if(NULL!=pos_entry->json_txt){
+vsecplat_policy.c:555:					free(pos_entry->json_txt);
+vsecplat_policy.c:576:			if(rule_entry->id == pos_entry->id){
+vsecplat_policy.c:578:				if(NULL!=pos_entry->json_txt){
+vsecplat_policy.c:579:					free(pos_entry->json_txt);
+vsecplat_policy.c:603:		INIT_LIST_HEAD(&rule_entry->list);
+vsecplat_policy.c:604:		list_add_tail(&rule_entry->list, &fw_policy_list->list);
+vsecplat_policy.c:626:		fprintf(file, "%s", rule_entry->json_txt);
+vsecplat_policy.c:834:			rule_entry->id, rule_entry->forward, rule_entry->conversion, rule_entry->rule_not_flag, saddr, daddr, sport, dport, proto, vlanid);
+vsecplat_policy.c:836:		if(!(((rule_entry->rule_not_flag&RULE_NOT_SIP)==RULE_NOT_SIP)^test_match_addr_obj(&rule_entry->sip, saddr))){
+vsecplat_policy.c:840:		if(!(((rule_entry->rule_not_flag&RULE_NOT_DIP)==RULE_NOT_DIP)^test_match_addr_obj(&rule_entry->dip, daddr))){
+vsecplat_policy.c:845:		if(!(((rule_entry->rule_not_flag&RULE_NOT_SPORT)==RULE_NOT_SPORT)^test_match_num_obj(&rule_entry->sport, sport))){
+vsecplat_policy.c:850:		if(!(((rule_entry->rule_not_flag&RULE_NOT_DPORT)==RULE_NOT_DPORT)^test_match_num_obj(&rule_entry->dport, dport))){
+vsecplat_policy.c:855:		if(!(((rule_entry->rule_not_flag&RULE_NOT_PROTO)==RULE_NOT_PROTO)^test_match_num_obj(&rule_entry->proto, proto))){
+vsecplat_policy.c:860:		if(!(((rule_entry->rule_not_flag&RULE_NOT_VLANID)==RULE_NOT_VLANID)^test_match_num_obj(&rule_entry->vlanid, vlanid))){
+vsecplat_policy.c:869:		if((rule_entry->forward==NM_PKT_FORWARD)&&(rule_entry->conversion)){
+vsecplat_policy.c:870:			memcpy(skb->mac.raw, rule_entry->dst_mac, NM_MAC_LEN);
+vsecplat_policy.c:873:		return rule_entry->forward;
+vsecplat_record.c:63:	return ((entry->sip==tmp->sip)&&(entry->dip==tmp->dip)&&
+vsecplat_record.c:64:	   (entry->sport==tmp->sport)&&(entry->dport==tmp->dport)&&
+vsecplat_record.c:65:	   (entry->vlanid==tmp->vlanid));
+vsecplat_record.c:140:	sprintf(buf, "%s", inet_ntoa(*(struct in_addr *)&entry->sip));
+vsecplat_record.c:156:	sprintf(buf, "%s", inet_ntoa(*(struct in_addr *)&entry->dip));
+vsecplat_record.c:166:	item->u.val_int = entry->sport;
+vsecplat_record.c:175:	item->u.val_int = entry->dport;
+vsecplat_record.c:184:	item->u.val_int = entry->proto;
+vsecplat_record.c:193:	item->u.val_int = entry->vlanid;
+vsecplat_record.c:202:	item->u.val_int = entry->count;
+vsecplat_record.c:211:	item->u.val_int = entry->packetsize;
+vsecplat_record.c:292:			if(entry->count==0){
+vsecplat_record.c:293:				list_del(&entry->list);
+vsecplat_record.c:306:				entry->count=0;
