@@ -32,6 +32,14 @@ static int nm_ipv4_recv(struct nm_skb *skb)
 	nm_skb_pull(skb, skb->nh.iph->ihl*4);
 	skb->h.raw = skb->data;
 
+	/*
+	 * mirror_state==0 或 guide_state==0 时，都不需要转发，所以不必进行策略匹配。
+	 * 之所以到这里才返回，是为了识别数据包的地址和端口，以便进行统计
+	 * */
+	if((0==global_vsecplat_config->mirror_state)|| (0==global_vsecplat_config->guide_state)){
+		return NM_PKT_DROP;
+	}
+
 	ret = get_forward_policy(skb);
 
 	return ret;	
@@ -67,18 +75,8 @@ static int nm_vlan_recv(struct nm_skb *skb)
 static int packet_intercept(struct nm_skb *skb)
 {
 	int ret=NM_PKT_DROP;
+
 	skb->mac.raw = skb->data;
-
-	/* mirror_state==0, stop forward and stop report */
-	if(0==global_vsecplat_config->mirror_state){
-		return NM_PKT_DROP;
-	}
-
-	/* guide_state==0, stop forward */
-	if(0==global_vsecplat_config->guide_state){
-		goto report_only;
-	}
-
 	eth_type_trans(skb);
 	switch(ntohs(skb->protocol)){
 		case ETH_P_IP:
@@ -93,9 +91,6 @@ static int packet_intercept(struct nm_skb *skb)
 		default:
 			break;
 	}
-
-report_only:
-	vsecplat_record_pkt(skb);
 
 	return ret;
 }
@@ -114,6 +109,7 @@ static int packet_send(struct nm_skb *skb)
 void *packet_handle_thread(void *unused)
 {
 	int ret=0;
+	int orig_len=0;
 	struct nm_skb *skb=NULL;
 
 	do{
@@ -121,10 +117,27 @@ void *packet_handle_thread(void *unused)
 		if(NULL==skb){
 			continue;
 		}
+
+		/* mirror_state==0, 既不转发，也不统计 */
+		if(0==global_vsecplat_config->mirror_state){
+			continue;
+		}
+
+		orig_len = skb->len;
+
 		ret = packet_intercept(skb);
+
+		/* guide_state==0, 停止转发，但是要统计 */
+		if(0==global_vsecplat_config->guide_state){
+			ret = NM_PKT_DROP;
+		}
+
 		if(ret==NM_PKT_FORWARD){
 			packet_send(skb);
 		}
+
+		skb->len = orig_len;
+		vsecplat_record_pkt(skb);
 	}while(1);
 
 	return unused;
