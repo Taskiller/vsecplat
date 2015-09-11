@@ -77,6 +77,7 @@ static int packet_intercept(struct nm_skb *skb)
 	int ret=NM_PKT_DROP;
 
 	skb->mac.raw = skb->data;
+
 	eth_type_trans(skb);
 	switch(ntohs(skb->protocol)){
 		case ETH_P_IP:
