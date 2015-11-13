@@ -1,0 +1,6 @@
+#!/bin/bash
+rmmod e1000.ko
+insmod /usr/local/vsecplat/drv/netmap_lin.ko
+insmod /usr/local/vsecplat/drv/e1000.ko
+
+/usr/local/vsecplat/bin/vsecplat &
