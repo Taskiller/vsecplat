@@ -1,0 +1,85 @@
+#!/bin/sh
+
+root_dir=`pwd`
+export root_dir
+
+DEST=/usr/local/vsecplat
+if [ ! -d $DESC ]; then
+	mkdir -p $DEST/{bin,drv}
+fi
+export DEST
+
+KSRC=/usr/src/kernels/linux-3.18.8/
+export KSRC
+
+make_drivers()
+{
+	echo "make drivers"
+	cd $root_dir/drivers
+	make j=4
+	cd ..
+	find ./drivers -name *.ko |xargs -I {} cp -f {} $DEST/drv
+}
+
+
+make_libnetmap()
+{
+	echo "make libnetmap"
+
+	cd $root_dir/userspace/lib
+	make
+	cp -af libnetmap.so /lib64/
+}
+
+make_daemon()
+{
+	echo "make example"
+
+	cd $root_dir/userspace/daemon
+	if [ ! -d objs ]; then mkdir -p objs; fi
+
+	make  
+
+	cp -af vsecplat $DEST/bin/
+}
+
+make_clean()
+{
+	cd $root_dir/drivers
+	make clean
+	rm -rf $DEST/drv/*.ko
+
+	cd $root_dir/userspace/daemon
+	make clean
+	rm -rf $DEST/bin/vsecplat
+
+	cd $root_dir/userspace/lib
+	make clean
+	rm /lib64/libnetmap.so
+}
+
+
+if [ $# -eq 0 ]; then
+	make_drivers
+	make_libnetmap
+	make_daemon
+else
+	while [ $# -gt 0 ]
+	do
+		case $1 in
+			-d)
+				make_drivers
+				;;
+			-l)
+				make_libnetmap
+				;;
+			-u)
+				make_daemon
+				;;
+			-c)
+				make_clean
+				;;
+		esac
+		shift
+	done
+fi
