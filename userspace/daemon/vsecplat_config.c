@@ -76,11 +76,9 @@ int parse_vsecplat_config(void)
 		strncpy(mgt_cfg->name, tmp->u.val_str, NM_NAME_LEN);
 
 		tmp = rte_object_get_item(item, "ipaddr");	
-		if(NULL==tmp){
-			nm_log("Failed to get manage interface ipaddr.\n");
-			goto out;
+		if(NULL!=tmp){
+			strncpy(mgt_cfg->ipaddr, tmp->u.val_str, NM_ADDR_STR_LEN);
 		}
-		strncpy(mgt_cfg->ipaddr, tmp->u.val_str, NM_ADDR_STR_LEN);
 
 		tmp = rte_object_get_item(item, "tcpport");
 		if(NULL==tmp){

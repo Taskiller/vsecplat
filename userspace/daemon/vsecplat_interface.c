@@ -121,6 +121,10 @@ int setup_mgt_interface(void)
 	FILE *cmd_file=NULL;
 	char cmd_buf[64];
 
+	if(global_vsecplat_config->mgt_cfg->ipaddr[0]=='0'){
+		return 0;
+	}
+
 	ifp = vsecplat_get_interface_by_name(global_vsecplat_config->mgt_cfg->name);	
 	if(NULL==ifp){
 		// TODO: no interface named as mgt
