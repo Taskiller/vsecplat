@@ -10,6 +10,7 @@ fi
 export DEST
 
 KSRC=/usr/src/kernels/linux-3.18.8/
+# KSRC=/usr/src/kernels/`uname -r`
 export KSRC
 
 make_drivers()
