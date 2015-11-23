@@ -4,7 +4,7 @@ root_dir=`pwd`
 export root_dir
 
 DEST=/usr/local/vsecplat
-if [ ! -d $DESC ]; then
+if [ ! -d $DEST ]; then
 	mkdir -p $DEST/{bin,drv}
 fi
 export DEST

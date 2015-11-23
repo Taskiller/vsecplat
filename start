@@ -1,6 +1,16 @@
 #!/bin/bash
-rmmod e1000.ko
+if test -e /sys/module/e1000;then
+	rmmod e1000.ko
+fi
+
+if test -e /sys/module/virtio_net;then
+	rmmod virtio_net.ko
+fi
+
 insmod /usr/local/vsecplat/drv/netmap_lin.ko
-insmod /usr/local/vsecplat/drv/e1000.ko
+# insmod /usr/local/vsecplat/drv/e1000.ko
+insmod /usr/local/vsecplat/drv/virtio_net.ko
+
+sleep 1
 
 /usr/local/vsecplat/bin/vsecplat &

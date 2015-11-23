@@ -130,11 +130,11 @@ get_next_if:
 	skb->rx_slot_idx = cur;
 
 	skb->i_dev = dev;
-    skb->head = (unsigned char *)p + NM_HEAD_OFFSET;
+    skb->head = (unsigned char *)p + NM_HEAD_OFFSET + 12;
     skb->data = skb->head;
     skb->tail = (unsigned char *)p + slot->len;
     skb->end = (unsigned char *)p + NM_BUF_SIZE - NM_END_RESERVED;
-    skb->len = slot->len;
+    skb->len = slot->len - 12;
 
 #if 0
 	printf("Recv %s, cur=%d, skb->data = %x %x %x %x %x %x: %x %x %x %x %x %x, %x %x %x %x\n",

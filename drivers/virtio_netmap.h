@@ -337,6 +337,8 @@ virtio_netmap_txsync(struct netmap_kring *kring, int flags)
 
 			NM_CHECK_ADDR_LEN(na, addr, len);
 
+			addr += NM_HEAD_OFFSET;
+
 			slot->flags &= ~(NS_REPORT | NS_BUF_CHANGED);
 			/* Initialize the scatterlist, expose it to the hypervisor,
 			 * and kick the hypervisor (if necessary).
@@ -442,6 +444,8 @@ virtio_netmap_rxsync(struct netmap_kring *kring, int flags)
 			if (addr == NETMAP_BUF_BASE(na)) /* bad buf */
 				return netmap_ring_reinit(kring);
 
+			addr += NM_HEAD_OFFSET;
+
 			slot->flags &= ~NS_BUF_CHANGED;
 
 			/* Initialize the scatterlist, expose it to the hypervisor,
@@ -507,6 +511,9 @@ static int virtio_netmap_init_buffers(struct SOFTC_T *vi)
 
                         slot = &ring->slot[i];
                         addr = NMB(na, slot);
+						
+						addr += NM_HEAD_OFFSET;
+
                         sg_set_buf(sg, addr, ring->nr_buf_size);
                         err = virtqueue_add_inbuf(vq, sg, 1, na, GFP_ATOMIC);
                         if (err < 0) {

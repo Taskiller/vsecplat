@@ -153,6 +153,7 @@ int setup_dp_interfaces(void)
 	struct vsecplat_interface *ifp=NULL;
 
 	if(nm_desc_init()){
+		printf("nm_desc_init failed\n");
 		return -1;
 	}
 
@@ -166,6 +167,7 @@ int setup_dp_interfaces(void)
 		dev = nm_open_dev(ifp->name);
 		if(NULL==dev){
 			// TODO
+			printf("inport nm_open_dev failed\n");
 			return -1;
 		}
 		memcpy(dev->mac, ifp->mac, NM_MAC_LEN);
@@ -177,11 +179,13 @@ int setup_dp_interfaces(void)
 		ifp = vsecplat_get_interface_by_name(global_vsecplat_config->outport_desc_array[idx].name);
 		if(NULL==ifp){
 			// TODO
+			printf("There are no output ports.\n");
 			return -1;
 		}
 		dev = nm_open_dev(ifp->name);
 		if(NULL==dev){
 			// TODO
+			printf("outport nm_open_dev failed\n");
 			return -1;
 		}
 		memcpy(dev->mac, ifp->mac, NM_MAC_LEN);
