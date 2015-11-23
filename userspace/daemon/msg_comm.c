@@ -126,6 +126,7 @@ void clean_policy_conn_desc(void)
 }
 
 extern struct thread_master *master;
+extern int vsecplat_packet_flag;
 int vsecplat_report_stats(struct thread *thread)
 {
 	int ret=0;
@@ -135,6 +136,12 @@ int vsecplat_report_stats(struct thread *thread)
 	struct record_json_item *record_json_item=NULL;
 
 	// printf("In vsecplat_report_stats\n");
+
+	if(0==vsecplat_packet_flag){
+		printf("there no packet recv.\n");
+	}
+
+	vsecplat_packet_flag = 0;
 	if(report_conn_desc->report_sock==0){
 		report_conn_desc->report_sock = socket(AF_INET, SOCK_DGRAM, 0);
 		if(report_conn_desc->report_sock<0){

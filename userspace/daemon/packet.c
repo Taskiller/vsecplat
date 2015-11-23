@@ -107,6 +107,7 @@ static int packet_send(struct nm_skb *skb)
 	return 0;
 }
 
+int vsecplat_packet_flag=0;
 void *packet_handle_thread(void *unused)
 {
 	int ret=0;
@@ -118,7 +119,7 @@ void *packet_handle_thread(void *unused)
 		if(NULL==skb){
 			continue;
 		}
-
+		vsecplat_packet_flag = 1;
 		/* mirror_state==0, 既不转发，也不统计 */
 		if(0==global_vsecplat_config->mirror_state){
 			continue;
