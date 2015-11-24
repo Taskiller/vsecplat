@@ -202,7 +202,7 @@ int nm_send(struct nm_skb *skb)
 			skb->head[6], skb->head[7], skb->head[8],
 			skb->head[9], skb->head[10], skb->head[11],
 			skb->head[12], skb->head[13], skb->head[14], skb->head[15],
-			skb->head[13], skb->head[14], skb->head[15], skb->head[16]);
+			skb->head[16], skb->head[17], skb->head[18], skb->head[19]);
 	}
 #endif
 
