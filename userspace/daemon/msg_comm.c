@@ -126,7 +126,8 @@ void clean_policy_conn_desc(void)
 }
 
 extern struct thread_master *master;
-extern int vsecplat_packet_flag;
+extern int vsecplat_show_record;
+
 int vsecplat_report_stats(struct thread *thread)
 {
 	int ret=0;
@@ -135,13 +136,6 @@ int vsecplat_report_stats(struct thread *thread)
 	struct list_head *pos=NULL, *tmp=NULL;
 	struct record_json_item *record_json_item=NULL;
 
-	// printf("In vsecplat_report_stats\n");
-
-	if(0==vsecplat_packet_flag){
-		printf("there no packet recv.\n");
-	}
-
-	vsecplat_packet_flag = 0;
 	if(report_conn_desc->report_sock==0){
 		report_conn_desc->report_sock = socket(AF_INET, SOCK_DGRAM, 0);
 		if(report_conn_desc->report_sock<0){
@@ -164,6 +158,11 @@ int vsecplat_report_stats(struct thread *thread)
 			nm_log("Failed to serialize record item.\n");
 			goto out;
 		}
+
+		if(vsecplat_show_record){
+			printf("report : %s\n", msg->data);
+		}
+
 		if(global_vsecplat_config->isencrypted){
 			len = nm_encrypt((unsigned int *)msg->data, len);
 		}
@@ -176,7 +175,8 @@ int vsecplat_report_stats(struct thread *thread)
 			nm_log("socket write error, errno=%d\n", errno);
 			goto out;
 		}
-		printf("send record: len=%d, send_len=%d\n", msg->len, w_len);
+
+		// printf("send record: len=%d, send_len=%d\n", msg->len, w_len);
 		memset(report_conn_desc->report_buf, 0, NM_SEND_BUF_LEN);
 	}
 

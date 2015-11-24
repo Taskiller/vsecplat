@@ -72,6 +72,8 @@ static inline int get_next_ring_idx(int rx_if_idx, int start)
 	return rx_ring_idx;
 }
 
+extern int vsecplat_show_packet __attribute__((weak, section("data")));
+
 struct nm_skb *nm_recv(void)
 {
 	struct nm_skb *skb=NULL;
@@ -131,19 +133,24 @@ get_next_if:
 
 	skb->i_dev = dev;
     skb->head = (unsigned char *)p + NM_HEAD_OFFSET + 12;
+    // skb->head = (unsigned char *)p + NM_HEAD_OFFSET;
     skb->data = skb->head;
     skb->tail = (unsigned char *)p + slot->len;
     skb->end = (unsigned char *)p + NM_BUF_SIZE - NM_END_RESERVED;
     skb->len = slot->len - 12;
+    // skb->len = slot->len;
 
-#if 0
-	printf("Recv %s, cur=%d, skb->data = %x %x %x %x %x %x: %x %x %x %x %x %x, %x %x %x %x\n",
-		dev->name, cur,
-		skb->data[0], skb->data[1], skb->data[2],
-		skb->data[3], skb->data[4], skb->data[5],
-		skb->data[6], skb->data[7], skb->data[8],
-		skb->data[9], skb->data[10], skb->data[11],
-		skb->data[12], skb->data[13], skb->data[14], skb->data[15]);
+#if 1
+	if(vsecplat_show_packet){
+		printf("Recv %s, cur=%d, len=%d, skb->data = %x %x %x %x %x %x: %x %x %x %x %x %x, %x %x %x %x, %x %x %x %x\n",
+			dev->name, cur, skb->len,
+			skb->data[0], skb->data[1], skb->data[2],
+			skb->data[3], skb->data[4], skb->data[5],
+			skb->data[6], skb->data[7], skb->data[8],
+			skb->data[9], skb->data[10], skb->data[11],
+			skb->data[12], skb->data[13], skb->data[14], skb->data[15],
+			skb->data[16], skb->data[17], skb->data[18], skb->data[19]);
+	}
 #endif
     cur = nm_ring_next(ring, cur);
     ring->head = ring->cur = cur;
@@ -186,14 +193,17 @@ int nm_send(struct nm_skb *skb)
 		// printf("tx_dev is NULL");
 		return -1;
 	}
-#if 0
-	printf("Send %s, skb->data = %x %x %x %x %x %x: %x %x %x %x %x %x, %x %x %x %x\n",
-		tx_dev->name,
-		skb->data[0], skb->data[1], skb->data[2],
-		skb->data[3], skb->data[4], skb->data[5],
-		skb->data[6], skb->data[7], skb->data[8],
-		skb->data[9], skb->data[10], skb->data[11],
-		skb->data[12], skb->data[13], skb->data[14], skb->data[15]);
+#if 1
+	if(vsecplat_show_packet){
+		printf("Send %s, len=%d, skb->head = %x %x %x %x %x %x: %x %x %x %x %x %x, %x %x %x %x, %x %x %x %x\n",
+			tx_dev->name, skb->len,
+			skb->head[0], skb->head[1], skb->head[2],
+			skb->head[3], skb->head[4], skb->head[5],
+			skb->head[6], skb->head[7], skb->head[8],
+			skb->head[9], skb->head[10], skb->head[11],
+			skb->head[12], skb->head[13], skb->head[14], skb->head[15],
+			skb->head[13], skb->head[14], skb->head[15], skb->head[16]);
+	}
 #endif
 
 	if(skb->buf_type==MEMORY_BUF){ // packet buf is system memory

@@ -20,6 +20,12 @@
 #include "rte_backtrace.h"
 
 struct thread_master *master=NULL;
+int vsecplat_show_packet=0;
+#define SHOW_PACKET_FLILE "/mnt/show_packet"
+
+int vsecplat_show_record=0;
+#define SHOW_RECORD_FLILE "/mnt/show_record"
+
 int main(void)
 {
 	int ret=0;
@@ -29,6 +35,14 @@ int main(void)
 	pthread_t packet_thread_id;
 
 	rte_backtrace_init();
+
+	if(!access(SHOW_PACKET_FLILE, F_OK)){ // file exist, will show packet
+		vsecplat_show_packet = 1;
+	}
+
+	if(!access(SHOW_RECORD_FLILE, F_OK)){ // file exist, will show packet
+		vsecplat_show_record = 1;
+	}
 
 	ret = nm_log_init();
 	if(ret<0){
