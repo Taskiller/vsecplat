@@ -159,10 +159,6 @@ int vsecplat_report_stats(struct thread *thread)
 			goto out;
 		}
 
-		if(vsecplat_show_record){
-			printf("report : %s\n", msg->data);
-		}
-
 		if(global_vsecplat_config->isencrypted){
 			len = nm_encrypt((unsigned int *)msg->data, len);
 		}
@@ -176,7 +172,10 @@ int vsecplat_report_stats(struct thread *thread)
 			goto out;
 		}
 
-		// printf("send record: len=%d, send_len=%d\n", msg->len, w_len);
+		if(vsecplat_show_record){
+			printf("send record: msg len=%d, send_len=%d\n", msg->len, w_len);
+		}
+
 		memset(report_conn_desc->report_buf, 0, NM_SEND_BUF_LEN);
 	}
 

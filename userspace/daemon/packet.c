@@ -135,11 +135,11 @@ void *packet_handle_thread(void *unused)
 			ret = NM_PKT_DROP;
 		}
 
+		skb->len = orig_len;
 		if(ret==NM_PKT_FORWARD){
 			packet_send(skb);
 		}
 
-		skb->len = orig_len;
 		vsecplat_record_pkt(skb);
 	}while(1);
 
