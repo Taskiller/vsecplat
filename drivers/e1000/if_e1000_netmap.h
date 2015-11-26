@@ -289,7 +289,6 @@ static void e1000_no_rx_alloc(struct SOFTC_T *adapter,
 	D("e1000->alloc_rx_buf should not be called");
 }
 
-
 /*
  * Make the tx and rx rings point to the netmap buffers.
  */
@@ -343,7 +342,6 @@ static int e1000_netmap_init_buffers(struct SOFTC_T *adapter)
 	}
 	return 1;
 }
-
 
 static void
 e1000_netmap_attach(struct SOFTC_T *adapter)

@@ -127,18 +127,17 @@ get_next_if:
 	slot = &ring->slot[cur];
 	p = NETMAP_BUF(ring, slot->buf_idx);
     skb = (struct nm_skb *)p;
+	// memset(skb, 0, sizeof(struct nm_skb));
 	skb->rx_if_idx = rx_if_idx;
 	skb->rx_ring_idx = rx_ring_idx;
 	skb->rx_slot_idx = cur;
 
 	skb->i_dev = dev;
-    skb->head = (unsigned char *)p + NM_HEAD_OFFSET + 12;
-    // skb->head = (unsigned char *)p + NM_HEAD_OFFSET;
+    skb->head = (unsigned char *)p + NM_HEAD_OFFSET;
     skb->data = skb->head;
     skb->tail = (unsigned char *)p + slot->len;
     skb->end = (unsigned char *)p + NM_BUF_SIZE - NM_END_RESERVED;
-    skb->len = slot->len - 12;
-    // skb->len = slot->len;
+    skb->len = slot->len;
 
 #if 1
 	if(vsecplat_show_packet){
