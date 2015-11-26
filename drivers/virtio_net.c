@@ -1166,7 +1166,7 @@ static int virtnet_close(struct net_device *dev)
 	int i;
 
 #ifdef DEV_NETMAP
-        netmap_disable_all_rings(dev);
+     netmap_disable_all_rings(dev);
 #endif
 	/* Make sure refill_work doesn't re-enable napi! */
 	cancel_delayed_work_sync(&vi->refill);

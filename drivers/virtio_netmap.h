@@ -27,14 +27,12 @@
 #include <netmap.h>
 #include <netmap_kern.h>
 
-
 #define SOFTC_T	virtnet_info
 
 static int virtnet_close(struct ifnet *ifp);
 static int virtnet_open(struct ifnet *ifp);
 static void free_receive_bufs(struct virtnet_info *vi);
 static void free_unused_bufs(struct virtnet_info *vi);
-
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 35)
 /* Before 2.6.35 there was no net_device.num_rx_queues, so we assume 1. */

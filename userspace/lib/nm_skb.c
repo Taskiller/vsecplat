@@ -142,8 +142,8 @@ get_next_if:
 
 #if 1
 	if(vsecplat_show_packet){
-		printf("Recv %s, cur=%d, len=%d, skb->data = %x %x %x %x %x %x: %x %x %x %x %x %x, %x %x %x %x, %x %x %x %x\n",
-			dev->name, cur, skb->len,
+		printf("Recv %s, cur=%d, slot->len=%d, len=%d, skb->data = %x %x %x %x %x %x: %x %x %x %x %x %x, %x %x %x %x, %x %x %x %x\n",
+			dev->name, cur, slot->len, skb->len,
 			skb->data[0], skb->data[1], skb->data[2],
 			skb->data[3], skb->data[4], skb->data[5],
 			skb->data[6], skb->data[7], skb->data[8],

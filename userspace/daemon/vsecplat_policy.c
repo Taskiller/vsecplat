@@ -348,7 +348,6 @@ static struct forward_rules *parse_forward_rules(struct rte_json *json)
 			goto out;
 		}
 
-
 		tmp = rte_object_get_item(entry, "id");
 		if(NULL!=tmp){
 			if(tmp->type != JSON_INTEGER){

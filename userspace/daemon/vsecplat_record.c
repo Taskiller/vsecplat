@@ -60,9 +60,13 @@ static u32 record_hash(struct record_entry *tmp)
 
 static inline int test_record_match(const struct record_entry *entry, const struct record_entry *tmp)
 {
+#if 0
 	return ((entry->sip==tmp->sip)&&(entry->dip==tmp->dip)&&
 	   (entry->sport==tmp->sport)&&(entry->dport==tmp->dport)&&
 	   (entry->vlanid==tmp->vlanid));
+#endif
+	return ((entry->sip==tmp->sip)&&(entry->dip==tmp->dip)&&
+	   (entry->sport==tmp->sport)&&(entry->dport==tmp->dport));
 }
 
 int vsecplat_record_pkt(struct nm_skb *skb)
@@ -214,7 +218,8 @@ static struct rte_json *record_entry_to_json(struct record_entry *entry)
 	return obj;
 }
 
-#define MAX_REPORT_ITEM 64
+// #define MAX_REPORT_ITEM 64
+#define MAX_REPORT_ITEM 10
 struct record_json_item *new_record_json_item(void)
 {
 	struct record_json_item *record_json_item=NULL;
