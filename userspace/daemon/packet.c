@@ -115,7 +115,7 @@ void *packet_handle_thread(void *unused)
 
 	do{
 		skb = nm_recv();
-		if(NULL==skb){
+		if((NULL==skb)||(0==skb->len)){
 			continue;
 		}
 

@@ -103,7 +103,6 @@ free_receive_bufs(struct SOFTC_T *vi)
 }
 #endif /* !VIRTIO_FREE_PAGES */
 
-
 #ifdef NETMAP_LINUX_VIRTIO_MULTI_QUEUE
 
 #define GET_RX_VQ(_vi, _i)		(_vi)->rq[_i].vq
@@ -175,7 +174,7 @@ virtio_netmap_init_sgs(struct SOFTC_T *vi)
 
 
 static void
-virtio_netmap_clean_used_rings(struct netmap_adapter *na, struct SOFTC_T *vi)
+virtio_netmap_clean_used_rings(struct SOFTC_T *vi, struct netmap_adapter *na)
 {
 	int i;
 
@@ -208,6 +207,44 @@ virtio_netmap_clean_used_rings(struct netmap_adapter *na, struct SOFTC_T *vi)
 	}
 }
 
+
+static void
+virtio_netmap_reclaim_unused(struct SOFTC_T *vi)
+{
+	int i;
+
+	/* Drain the RX/TX virtqueues, otherwise the driver will
+	 * interpret the netmap buffers currently linked to the
+	 * netmap ring as buffers allocated by the driver. This
+	 * would break the driver (and kernel panic/ooops).
+	 * We scan all the virtqueues, even those that have not been
+	 * activated (by 'ethtool --set-channels eth0 combined $N').
+	 */
+
+	for (i = 0; i < DEV_NUM_TX_QUEUES(vi->dev); i++) {
+		struct virtqueue *vq = GET_TX_VQ(vi, i);
+		void *token;
+		int n = 0;
+
+		while ((token = virtqueue_detach_unused_buf(vq)) != NULL) {
+			n++;
+		}
+		D("detached %d pending bufs on queue tx-%d", n, i);
+	}
+
+	for (i = 0; i < DEV_NUM_RX_QUEUES(vi->dev); i++) {
+		struct virtqueue *vq = GET_RX_VQ(vi, i);
+		void *token;
+		int n = 0;
+
+		while ((token = virtqueue_detach_unused_buf(vq)) != NULL) {
+			DECR_NUM(vi, i);
+			n++;
+		}
+		D("detached %d pending bufs on queue rx-%d", n, i);
+	}
+}
+
 /* Register and unregister. */
 static int
 virtio_netmap_reg(struct netmap_adapter *na, int onoff)
@@ -215,7 +252,6 @@ virtio_netmap_reg(struct netmap_adapter *na, int onoff)
 	struct ifnet *ifp = na->ifp;
 	struct SOFTC_T *vi = netdev_priv(ifp);
 	int error = 0;
-	int i;
 
 	if (na == NULL)
 		return EINVAL;
@@ -234,7 +270,7 @@ virtio_netmap_reg(struct netmap_adapter *na, int onoff)
 		/* Get and free any used buffers. This is necessary
 		 * before calling free_unused_bufs(), that uses
 		 * virtqueue_detach_unused_buf(). */
-		virtio_netmap_clean_used_rings(na, vi);
+		virtio_netmap_clean_used_rings(vi, na);
 
 		/* Initialize scatter-gather lists used to publish netmap
 		 * buffers through virtio descriptors, in such a way that each
@@ -263,38 +299,9 @@ virtio_netmap_reg(struct netmap_adapter *na, int onoff)
 
 		/* Get and free any used buffer. This is necessary
 		 * before calling virtqueue_detach_unused_buf(). */
-		virtio_netmap_clean_used_rings(na, vi);
+		virtio_netmap_clean_used_rings(vi, na);
 
-		/* Drain the RX/TX virtqueues, otherwise the driver will
-		 * interpret the netmap buffers currently linked to the
-		 * netmap ring as buffers allocated by the driver. This
-		 * would break the driver (and kernel panic/ooops).
-		 * We scan all the virtqueues, even those that have not been
-		 * activated (by 'ethtool --set-channels eth0 combined $N').
-		 */
-
-		for (i = 0; i < DEV_NUM_TX_QUEUES(vi->dev); i++) {
-			struct virtqueue *vq = GET_TX_VQ(vi, i);
-			void *token;
-			int n = 0;
-
-			while ((token = virtqueue_detach_unused_buf(vq)) != NULL) {
-				n++;
-			}
-			D("detached %d pending bufs on queue tx-%d", n, i);
-		}
-
-		for (i = 0; i < DEV_NUM_RX_QUEUES(vi->dev); i++) {
-			struct virtqueue *vq = GET_RX_VQ(vi, i);
-			void *token;
-			int n = 0;
-
-			while ((token = virtqueue_detach_unused_buf(vq)) != NULL) {
-				DECR_NUM(vi, i);
-				n++;
-			}
-			D("detached %d pending bufs on queue rx-%d", n, i);
-		}
+		virtio_netmap_reclaim_unused(vi);
 	}
 
 	/* Up the interface. This also enables the napi. */
@@ -325,8 +332,14 @@ virtio_netmap_txsync(struct netmap_kring *kring, int flags)
 	struct SOFTC_T *vi = netdev_priv(ifp);
 	struct virtqueue *vq = GET_TX_VQ(vi, ring_nr);
 	struct scatterlist *sg = GET_TX_SG(vi, ring_nr);
-	size_t vnet_hdr_len = vi->mergeable_rx_bufs ? sizeof(shared_tx_vnet_hdr) : sizeof(shared_tx_vnet_hdr.hdr);
+	size_t vnet_hdr_len = vi->mergeable_rx_bufs ?
+				sizeof(shared_tx_vnet_hdr) :
+				sizeof(shared_tx_vnet_hdr.hdr);
 	struct netmap_adapter *token;
+	unsigned int total_bytes=0, total_packets=0;
+	struct virtnet_stats *stats = this_cpu_ptr(vi->stats);
+
+	rmb();
 
 	// XXX invert the order
 	/* Free used slots. We only consider our own used buffers, recognized
@@ -335,14 +348,18 @@ virtio_netmap_txsync(struct netmap_kring *kring, int flags)
 	n = 0;
 	for (;;) {
 		token = virtqueue_get_buf(vq, &nic_i); /* dummy 2nd arg */
-		if (token == NULL)
+		if (token == NULL){
 			break;
-		if (likely(token == na))
+		}
+
+		if (likely(token == na)){
 			n++;
+		}
 	}
 	kring->nr_hwtail += n;
-	if (kring->nr_hwtail > lim)
+	if (kring->nr_hwtail > lim){
 		kring->nr_hwtail -= lim + 1;
+	}
 
 	/*
 	 * First part: process new packets to send.
@@ -379,7 +396,8 @@ virtio_netmap_txsync(struct netmap_kring *kring, int flags)
 				break;
 			}
 			virtqueue_kick(vq);
-
+			total_bytes += len;
+			total_packets++;
 			nm_i = nm_next(nm_i, lim);
 			nic_i = nm_next(nic_i, lim);
 		}
@@ -390,9 +408,13 @@ virtio_netmap_txsync(struct netmap_kring *kring, int flags)
 		 * possibly only when a considerable amount of work has been
 		 * done.
 		 */
-		if (nm_kr_txempty(kring))
+		if (nm_kr_txempty(kring)){
 			virtqueue_enable_cb_delayed(vq);
+		}
 	}
+	stats->tx_bytes += total_bytes;
+	stats->tx_packets += total_packets;
+
 out:
 
 	return 0;
@@ -419,9 +441,11 @@ virtio_netmap_rxsync(struct netmap_kring *kring, int flags)
 	struct SOFTC_T *vi = netdev_priv(ifp);
 	struct virtqueue *vq = GET_RX_VQ(vi, ring_nr);
 	struct scatterlist *sg = GET_RX_SG(vi, ring_nr);
+	struct virtnet_stats *stats = this_cpu_ptr(vi->stats);
 	size_t vnet_hdr_len = vi->mergeable_rx_bufs ?
 				sizeof(shared_rx_vnet_hdr) :
 				sizeof(shared_rx_vnet_hdr.hdr);
+	unsigned int total_bytes=0, total_packets=0;
 
 	/* XXX netif_carrier_ok ? */
 
@@ -449,7 +473,7 @@ virtio_netmap_rxsync(struct netmap_kring *kring, int flags)
 				break;
 
 			if (unlikely(token != na)) {
-				RD(5,"Received unexpected virtqueue token %p\n",
+				RD(5, "Received unexpected virtqueue token %p\n",
 						token);
 			} else {
 				/* Skip the virtio-net header. */
@@ -460,16 +484,22 @@ virtio_netmap_rxsync(struct netmap_kring *kring, int flags)
 					len = 0;
 				}
 
-				// printk(KERN_ERR "slot[%d].len=%d\n", nm_i, len);
 				ring->slot[nm_i].len = len;
 				ring->slot[nm_i].flags = slot_flags;
+				total_bytes += len;
+				total_packets++;
 				nm_i = nm_next(nm_i, lim);
 				n++;
 			}
 		}
-		kring->nr_hwtail = nm_i;
+		if(n){
+			kring->nr_hwtail = nm_i;
+			stats->rx_bytes += total_bytes;
+			stats->rx_packets += total_packets;
+		}
 		kring->nr_kflags &= ~NKR_PENDINTR;
 	}
+
 	ND("[B] h %d c %d hwcur %d hwtail %d",
 			ring->head, ring->cur, kring->nr_hwcur,
 			kring->nr_hwtail);
@@ -535,7 +565,6 @@ virtio_netmap_init_buffers(struct SOFTC_T *vi)
 
 	if (!nm_native_on(na))
 		return 0;
-
 	for (r = 0; r < na->num_rx_rings; r++) {
 		COMPAT_DECL_SG
 		struct netmap_ring *ring = na->rx_rings[r].ring;
@@ -555,7 +584,8 @@ virtio_netmap_init_buffers(struct SOFTC_T *vi)
 		 * It's important to leave one virtqueue slot free, otherwise
 		 * we can run into ring->cur/ring->tail wraparounds.
 		 */
-		for (i = 0; i < na->num_rx_desc-1; i++) {
+		// for (i = 0; i < na->num_rx_desc-1; i++) {
+		for (i = 0; i < na->num_rx_desc; i++) {
 			void *addr;
 
 			slot = &ring->slot[i];
@@ -596,8 +626,7 @@ virtio_netmap_config(struct netmap_adapter *na, u_int *txr, u_int *txd,
 	*txd = virtqueue_get_vring_size(GET_TX_VQ(vi, 0));
 	*rxr = 1;
 	*rxd = virtqueue_get_vring_size(GET_RX_VQ(vi, 0));
-
-	// printk("virtio config txq=%d, txd=%d rxq=%d, rxd=%d", *txr, *txd, *rxr, *rxd);
+	printk("virtio config txq=%d, txd=%d rxq=%d, rxd=%d", *txr, *txd, *rxr, *rxd);
 
 	return 0;
 }
@@ -624,9 +653,8 @@ virtio_netmap_attach(struct SOFTC_T *vi)
 	na.nm_config = virtio_netmap_config;
 	na.num_tx_rings = na.num_rx_rings = 1;
 	netmap_attach(&na);
-#if 0
-	printk("virtio attached txq=%d, txd=%d rxq=%d, rxd=%d", 
+
+	printk("virtio attached txq=%d, txd=%d rxq=%d, rxd=%d",
 			na.num_tx_rings, na.num_tx_desc, na.num_tx_rings, na.num_rx_desc);
-#endif
 }
 /* end of file */

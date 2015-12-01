@@ -73,7 +73,6 @@ static inline int get_next_ring_idx(int rx_if_idx, int start)
 }
 
 extern int vsecplat_show_packet __attribute__((weak, section("data")));
-
 struct nm_skb *nm_recv(void)
 {
 	struct nm_skb *skb=NULL;
@@ -126,13 +125,11 @@ get_next_if:
 	cur = ring->cur;
 	slot = &ring->slot[cur];
 	p = NETMAP_BUF(ring, slot->buf_idx);
-
-    skb = (struct nm_skb *)p;
+	skb = (struct nm_skb *)p;
 	memset(skb, 0, sizeof(struct nm_skb));
 	skb->rx_if_idx = rx_if_idx;
 	skb->rx_ring_idx = rx_ring_idx;
 	skb->rx_slot_idx = cur;
-
 	skb->i_dev = dev;
     skb->head = (unsigned char *)p + NM_HEAD_OFFSET;
     skb->data = skb->head;
@@ -142,8 +139,8 @@ get_next_if:
 
 #if 1
 	if(vsecplat_show_packet){
-		printf("Recv %s, cur=%d, slot->len=%d, len=%d, skb->data = %x %x %x %x %x %x: %x %x %x %x %x %x, %x %x %x %x, %x %x %x %x %x, %x %x %x %x %x, %x %x %x %x %x\n",
-			dev->name, cur, slot->len, skb->len,
+		printf("Recv %s, cur=%d, slot->buf_idx=%d, slot->len=%d, skb->data = %x %x %x %x %x %x: %x %x %x %x %x %x, %x %x %x %x, %x %x %x %x %x, %x %x %x %x %x, %x %x %x %x %x\n",
+			dev->name, cur, slot->buf_idx, slot->len, 
 			skb->data[0], skb->data[1], skb->data[2], skb->data[3], skb->data[4], skb->data[5],
 			skb->data[6], skb->data[7], skb->data[8], skb->data[9], skb->data[10], skb->data[11],
 			skb->data[12], skb->data[13], skb->data[14], skb->data[15],
