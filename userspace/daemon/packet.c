@@ -128,7 +128,7 @@ void *packet_handle_thread(void *unused)
 
 		ret = packet_intercept(skb);
 
-		// ret = NM_PKT_FORWARD;
+		// ret = NM_PKT_DROP;
 
 		/* guide_state==0, 停止转发，但是要统计 */
 		if(0==global_vsecplat_config->guide_state){

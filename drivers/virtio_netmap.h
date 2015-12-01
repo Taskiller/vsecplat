@@ -325,9 +325,7 @@ virtio_netmap_txsync(struct netmap_kring *kring, int flags)
 	struct SOFTC_T *vi = netdev_priv(ifp);
 	struct virtqueue *vq = GET_TX_VQ(vi, ring_nr);
 	struct scatterlist *sg = GET_TX_SG(vi, ring_nr);
-	size_t vnet_hdr_len = vi->mergeable_rx_bufs ?
-	sizeof(shared_tx_vnet_hdr) :
-	sizeof(shared_tx_vnet_hdr.hdr);
+	size_t vnet_hdr_len = vi->mergeable_rx_bufs ? sizeof(shared_tx_vnet_hdr) : sizeof(shared_tx_vnet_hdr.hdr);
 	struct netmap_adapter *token;
 
 	// XXX invert the order
@@ -451,7 +449,7 @@ virtio_netmap_rxsync(struct netmap_kring *kring, int flags)
 				break;
 
 			if (unlikely(token != na)) {
-				RD(5, "Received unexpected virtqueue token %p\n",
+				RD(5,"Received unexpected virtqueue token %p\n",
 						token);
 			} else {
 				/* Skip the virtio-net header. */
@@ -462,6 +460,7 @@ virtio_netmap_rxsync(struct netmap_kring *kring, int flags)
 					len = 0;
 				}
 
+				// printk(KERN_ERR "slot[%d].len=%d\n", nm_i, len);
 				ring->slot[nm_i].len = len;
 				ring->slot[nm_i].flags = slot_flags;
 				nm_i = nm_next(nm_i, lim);
@@ -597,8 +596,8 @@ virtio_netmap_config(struct netmap_adapter *na, u_int *txr, u_int *txd,
 	*txd = virtqueue_get_vring_size(GET_TX_VQ(vi, 0));
 	*rxr = 1;
 	*rxd = virtqueue_get_vring_size(GET_RX_VQ(vi, 0));
-	D("virtio config txq=%d, txd=%d rxq=%d, rxd=%d",
-			*txr, *txd, *rxr, *rxd);
+
+	// printk("virtio config txq=%d, txd=%d rxq=%d, rxd=%d", *txr, *txd, *rxr, *rxd);
 
 	return 0;
 }
@@ -625,9 +624,9 @@ virtio_netmap_attach(struct SOFTC_T *vi)
 	na.nm_config = virtio_netmap_config;
 	na.num_tx_rings = na.num_rx_rings = 1;
 	netmap_attach(&na);
-
-	D("virtio attached txq=%d, txd=%d rxq=%d, rxd=%d",
-			na.num_tx_rings, na.num_tx_desc,
-			na.num_tx_rings, na.num_rx_desc);
+#if 0
+	printk("virtio attached txq=%d, txd=%d rxq=%d, rxd=%d", 
+			na.num_tx_rings, na.num_tx_desc, na.num_tx_rings, na.num_rx_desc);
+#endif
 }
 /* end of file */
