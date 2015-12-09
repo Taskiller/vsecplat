@@ -474,6 +474,7 @@ static void receive_buf(struct receive_queue *rq, void *buf, unsigned int len)
 	hdr = skb_vnet_hdr(skb);
 
 	u64_stats_update_begin(&stats->rx_syncp);
+	// printk("skb->len = %d\n", skb->len);
 	stats->rx_bytes += skb->len;
 	stats->rx_packets++;
 	u64_stats_update_end(&stats->rx_syncp);
@@ -768,15 +769,14 @@ static int virtnet_poll(struct napi_struct *napi, int budget)
 	unsigned int r, received = 0;
 
 #ifdef DEV_NETMAP
-        int work_done = 0;
+    int work_done = 0;
 	struct virtnet_info *vi = rq->vq->vdev->priv;
-
-        if (netmap_rx_irq(vi->dev, vq2rxq(rq->vq), &work_done)) {
+ 
+    if (netmap_rx_irq(vi->dev, vq2rxq(rq->vq), &work_done)) {
 		napi_complete(napi);
 		ND("called netmap_rx_irq");
-
-                return 1;
-        }
+        return 1;
+    }
 #endif
 
 again:

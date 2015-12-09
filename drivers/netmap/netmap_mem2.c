@@ -54,7 +54,8 @@ __FBSDID("$FreeBSD: head/sys/dev/netmap/netmap.c 241723 2012-10-19 09:41:45Z gle
 #include <netmap_kern.h>
 #include "netmap_mem2.h"
 
-#define NETMAP_BUF_MAX_NUM	20*4096*2	/* large machine */
+// #define NETMAP_BUF_MAX_NUM	20*4096*2	/* large machine */
+#define NETMAP_BUF_MAX_NUM	4096*2	/* large machine */
 
 #define NETMAP_POOL_MAX_NAMSZ	32
 
@@ -164,14 +165,17 @@ netmap_mem_get_bufsize(struct netmap_mem_d *nmd)
 struct netmap_obj_params netmap_params[NETMAP_POOLS_NR] = {
 	[NETMAP_IF_POOL] = {
 		.size = 1024,
-		.num  = 100,
+		// .num  = 100,
+		.num  = 10,
 	},
 	[NETMAP_RING_POOL] = {
 		.size = 9*PAGE_SIZE,
-		.num  = 200,
+		// .num  = 200,
+		.num  = 20,
 	},
 	[NETMAP_BUF_POOL] = {
-		.size = 2048,
+		// .size = 2048,
+		.size = 65536, 
 		.num  = NETMAP_BUF_MAX_NUM,
 	},
 };
@@ -220,6 +224,7 @@ struct netmap_mem_d nm_mem = {	/* Our memory allocator. */
 			.name	= "netmap_buf",
 			.objminsize = 64,
 			.objmaxsize = 65536,
+			// .objmaxsize = 65*1024,
 			.nummin     = 4,
 			.nummax	    = 1000000, /* one million! */
 		},
@@ -1197,12 +1202,14 @@ netmap_mem_global_config(struct netmap_mem_d *nmd)
 {
 	int i;
 
-	if (nmd->refcount)
+	if (nmd->refcount){
 		/* already in use, we cannot change the configuration */
 		goto out;
+    }
 
-	if (!netmap_memory_config_changed(nmd))
+	if (!netmap_memory_config_changed(nmd)){
 		goto out;
+    }
 
 	D("reconfiguring");
 
@@ -1217,8 +1224,9 @@ netmap_mem_global_config(struct netmap_mem_d *nmd)
 	for (i = 0; i < NETMAP_POOLS_NR; i++) {
 		nmd->lasterr = netmap_config_obj_allocator(&nmd->pools[i],
 				netmap_params[i].num, netmap_params[i].size);
-		if (nmd->lasterr)
+		if (nmd->lasterr){
 			goto out;
+        }
 	}
 
 out:
@@ -1233,10 +1241,10 @@ netmap_mem_global_finalize(struct netmap_mem_d *nmd)
 
 	NMA_LOCK(nmd);
 
-
 	/* update configuration if changed */
-	if (netmap_mem_global_config(nmd))
+	if (netmap_mem_global_config(nmd)){
 		goto out;
+	}
 
 	nmd->refcount++;
 
@@ -1246,8 +1254,9 @@ netmap_mem_global_finalize(struct netmap_mem_d *nmd)
 		goto out;
 	}
 
-	if (netmap_mem_finalize_all(nmd))
+	if (netmap_mem_finalize_all(nmd)){
 		goto out;
+	}
 
 	nmd->lasterr = 0;
 

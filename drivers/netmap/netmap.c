@@ -1899,11 +1899,13 @@ netmap_do_regif(struct netmap_priv_d *priv, struct netmap_adapter *na,
 	netmap_update_config(na);
 	priv->np_na = na;     /* store the reference */
 	error = netmap_set_ringid(priv, ringid, flags);
-	if (error)
+	if (error){
 		goto err;
+	}
 	error = netmap_mem_finalize(na->nm_mem, na);
-	if (error)
+	if (error){
 		goto err;
+	}
 
 	if (na->active_fds == 0) {
 		/*
@@ -1917,13 +1919,15 @@ netmap_do_regif(struct netmap_priv_d *priv, struct netmap_adapter *na,
 		 * the netmap rings themselves
 		 */
 		error = na->nm_krings_create(na);
-		if (error)
+		if (error){
 			goto err_drop_mem;
+		}
 
 		/* create all missing netmap rings */
 		error = netmap_mem_rings_create(na);
-		if (error)
+		if (error){
 			goto err_del_krings;
+		}
 	}
 
 	/* in all cases, create a new netmap if */
@@ -1944,8 +1948,9 @@ netmap_do_regif(struct netmap_priv_d *priv, struct netmap_adapter *na,
 		na->na_lut_objtotal = netmap_mem_get_buftotal(na->nm_mem);
 		na->na_lut_objsize = netmap_mem_get_bufsize(na->nm_mem);
 		error = na->nm_register(na, 1); /* mode on */
-		if (error) 
+		if (error){
 			goto err_del_if;
+		} 
 	}
 
 	/*
