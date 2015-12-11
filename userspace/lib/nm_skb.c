@@ -73,6 +73,25 @@ static inline int get_next_ring_idx(int rx_if_idx, int start)
 }
 
 extern int vsecplat_show_packet __attribute__((weak, section("data")));
+
+static inline int parse_packet_len(unsigned char *ptr)
+{
+    unsigned short *proto = (unsigned short *)(ptr); 
+    unsigned short *len=NULL;
+    switch(*proto){
+        case 0x608: // ARP
+            return 60;
+        case 0x8: // IP
+            len = (unsigned short *)(ptr+4);
+            return ntohs(*len) + 14; 
+        case 0x81: // VLAN
+            return parse_packet_len(ptr+4);
+        default:
+            return 0;
+    }
+    return 0;
+}
+
 struct nm_skb *nm_recv(void)
 {
 	struct nm_skb *skb=NULL;
@@ -85,7 +104,8 @@ struct nm_skb *nm_recv(void)
 	int ret=0;
 
 	if(global_nm_desc->need_poll){ // Need poll again
-		ret = poll(global_nm_desc->fds, global_nm_desc->fds_num, 100);
+		// ret = poll(global_nm_desc->fds, global_nm_desc->fds_num, 100);
+		ret = poll(global_nm_desc->fds, global_nm_desc->fds_num, 10);
 		if(ret==0){
 			// printf("poll timeout\n");
 			goto no_packet;
@@ -132,6 +152,7 @@ get_next_if:
 	skb->rx_slot_idx = cur;
 	skb->i_dev = dev;
     skb->head = (unsigned char *)p + NM_HEAD_OFFSET;
+    slot->len = parse_packet_len(skb->head+12);
     skb->data = skb->head;
     skb->tail = (unsigned char *)p + slot->len;
     skb->end = (unsigned char *)p + NM_BUF_SIZE - NM_END_RESERVED;

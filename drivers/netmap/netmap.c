@@ -495,7 +495,7 @@ ports attached to the switch)
 MALLOC_DEFINE(M_NETMAP, "netmap", "Network memory map");
 
 /* user-controlled variables */
-int netmap_verbose=0;
+ int netmap_verbose=0;
 
 static int netmap_no_timestamp; /* don't timestamp on rxsync */
 
@@ -1243,8 +1243,9 @@ netmap_rxsync_from_host(struct netmap_adapter *na, struct thread *td, void *pwai
 
 			m_copydata(m, 0, len, NMB(na, slot));
 			ND("nm %d len %d", nm_i, len);
-			if (netmap_verbose)
-                                D("%s", nm_dump_buf(NMB(na, slot),len, 128, NULL));
+			if (netmap_verbose){
+                D("%s", nm_dump_buf(NMB(na, slot),len, 128, NULL));
+            }
 
 			slot->len = len;
 			slot->flags = kring->nkr_slot_flags;
@@ -1572,8 +1573,10 @@ nm_rxsync_prologue(struct netmap_kring *kring)
 	uint32_t const n = kring->nkr_num_slots;
 	uint32_t head, cur;
 
-	RD(5,"%s kring->nr_hwcur=%d kring->nr_hwtail=%d ring->head=%d ring->cur=%d ring->tail=%d",
-		kring->name, kring->nr_hwcur, kring->nr_hwtail, ring->head, ring->cur, ring->tail);
+    if(netmap_verbose){
+    	D("%s kring->nr_hwcur=%d kring->nr_hwtail=%d ring->head=%d ring->cur=%d ring->tail=%d\n",
+    		kring->name, kring->nr_hwcur, kring->nr_hwtail, ring->head, ring->cur, ring->tail);
+    }
 
 	/*
 	 * Before storing the new values, we should check they do not
@@ -1620,8 +1623,10 @@ nm_rxsync_prologue(struct netmap_kring *kring)
 	return head;
 
 error:
-	RD(5, "kring error: nr_hwcur=%d rcur=%d nr_hwtail=%d rhead=%d rcur=%d ring->tail=%d",
-		kring->nr_hwcur, kring->rcur, kring->nr_hwtail, kring->rhead, kring->rcur, ring->tail);
+    if(netmap_verbose){
+    	printk("kring error: nr_hwcur=%d rcur=%d nr_hwtail=%d rhead=%d rcur=%d ring->tail=%d",
+    		kring->nr_hwcur, kring->rcur, kring->nr_hwtail, kring->rhead, kring->rcur, ring->tail);
+    }
 
 	return n;
 }
@@ -1647,7 +1652,9 @@ netmap_ring_reinit(struct netmap_kring *kring)
 	int errors = 0;
 
 	// XXX KASSERT nm_kr_tryget
-	RD(10, "called for %s", kring->name);
+    if(netmap_verbose){
+	    printk("In netmap_ring_reinit, called for %s", kring->name);
+    }
 	// XXX probably wrong to trust userspace
 	kring->rhead = ring->head;
 	kring->rcur  = ring->cur;
@@ -1673,11 +1680,10 @@ netmap_ring_reinit(struct netmap_kring *kring)
 		}
 	}
 	if (errors) {
-		RD(10, "total %d errors", errors);
-		RD(10, "%s reinit, cur %d -> %d tail %d -> %d",
-			kring->name,
-			ring->cur, kring->nr_hwcur,
-			ring->tail, kring->nr_hwtail);
+        if(netmap_verbose){
+    		printk("total %d errors, %s reinit, cur %d -> %d tail %d -> %d\n",
+    			errors, kring->name, ring->cur, kring->nr_hwcur, ring->tail, kring->nr_hwtail);
+        }
 		ring->head = kring->rhead = kring->nr_hwcur;
 		ring->cur  = kring->rcur  = kring->nr_hwcur;
 		ring->tail = kring->rtail = kring->nr_hwtail;
@@ -2151,6 +2157,9 @@ netmap_ioctl(struct cdev *dev, u_long cmd, caddr_t data,
 		nifp = priv->np_nifp;
 
 		if (nifp == NULL) {
+            if(netmap_verbose){
+                printk("Internal error: nifp is NULL\n");
+            }
 			error = ENXIO;
 			break;
 		}
@@ -2159,12 +2168,17 @@ netmap_ioctl(struct cdev *dev, u_long cmd, caddr_t data,
 		na = priv->np_na;      /* we have a reference */
 
 		if (na == NULL) {
-			D("Internal error: nifp != NULL && na == NULL");
+            if(netmap_verbose){
+			    printk("Internal error: nifp != NULL && na == NULL\n");
+            }
 			error = ENXIO;
 			break;
 		}
 
 		if (!nm_netmap_on(na)) {
+            if(netmap_verbose){
+                printk("Internal error: nm_netmap_on failed\n");
+            }
 			error = ENXIO;
 			break;
 		}
@@ -2182,29 +2196,36 @@ netmap_ioctl(struct cdev *dev, u_long cmd, caddr_t data,
 		for (i = qfirst; i < qlast; i++) {
 			struct netmap_kring *kring = krings + i;
 			if (nm_kr_tryget(kring)) {
+                if(netmap_verbose){
+                    printk("Internal error: busy, i=%d\n", i);
+                }
 				error = EBUSY;
 				goto out;
 			}
 			if (cmd == NIOCTXSYNC) {
-				if (netmap_verbose & NM_VERB_TXSYNC)
-					D("pre txsync ring %d cur %d hwcur %d",
-					    i, kring->ring->cur,
-					    kring->nr_hwcur);
+				if (netmap_verbose & NM_VERB_TXSYNC){
+					printk("pre txsync ring %d cur %d hwcur %d\n", i, kring->ring->cur, kring->nr_hwcur);
+                }
 				if (nm_txsync_prologue(kring) >= kring->nkr_num_slots) {
 					netmap_ring_reinit(kring);
 				} else if (kring->nm_sync(kring, NAF_FORCE_RECLAIM) == 0) {
 					nm_txsync_finalize(kring);
 				}
-				if (netmap_verbose & NM_VERB_TXSYNC)
-					D("post txsync ring %d cur %d hwcur %d",
-					    i, kring->ring->cur,
-					    kring->nr_hwcur);
+				if (netmap_verbose & NM_VERB_TXSYNC){
+					printk("post txsync ring %d cur %d hwcur %d\n", i, kring->ring->cur, kring->nr_hwcur);
+                }
 			} else {
+        		if (netmap_verbose & NM_VERB_RXSYNC){
+					printk("pre rxsync ring %d cur %d hwcur %d\n", i, kring->ring->cur, kring->nr_hwcur);
+                }
 				if (nm_rxsync_prologue(kring) >= kring->nkr_num_slots) {
 					netmap_ring_reinit(kring);
 				} else if (kring->nm_sync(kring, NAF_FORCE_READ) == 0) {
 					nm_rxsync_finalize(kring);
 				}
+				if (netmap_verbose & NM_VERB_RXSYNC){
+					printk("post rxsync ring %d cur %d hwcur %d\n", i, kring->ring->cur, kring->nr_hwcur);
+                }
 				microtime(&na->rx_rings[i].ring->ts);
 			}
 			nm_kr_put(kring);
@@ -2303,8 +2324,9 @@ netmap_poll(struct cdev *dev, int events, struct thread *td)
 	 */
 	if (devfs_get_cdevpriv((void **)&priv) != 0) {
 		is_kevent = 1;
-		if (netmap_verbose)
+		if (netmap_verbose){
 			D("called from kevent");
+        }
 		priv = (struct netmap_priv_d *)dev;
 	}
 	if (priv == NULL)
@@ -2323,6 +2345,7 @@ netmap_poll(struct cdev *dev, int events, struct thread *td)
 
 	if (netmap_verbose & 0x8000)
 		D("device %s events 0x%x", na->name, events);
+
 	want_tx = events & (POLLOUT | POLLWRNORM);
 	want_rx = events & (POLLIN | POLLRDNORM);
 
@@ -2444,9 +2467,9 @@ do_retry_rx:
 			kring = &na->rx_rings[i];
 
 			if (nm_kr_tryget(kring)) {
-				if (netmap_verbose)
-					RD(2, "%p lost race on rxring %d, ok",
-					    priv, i);
+				if (netmap_verbose){
+					printk("%p lost race on rxring %d, ok\n", priv, i);
+                }
 				continue;
 			}
 
@@ -2970,8 +2993,7 @@ netmap_reset(struct netmap_adapter *na, enum txrx tx, u_int n,
  * - for a nic connected to a switch, call the proper forwarding routine
  *   (see netmap_bwrap_intr_notify)
  */
-void
-netmap_common_irq(struct ifnet *ifp, u_int q, u_int *work_done)
+void netmap_common_irq(struct ifnet *ifp, u_int q, u_int *work_done)
 {
 	struct netmap_adapter *na = NA(ifp);
 	struct netmap_kring *kring;
@@ -2979,7 +3001,7 @@ netmap_common_irq(struct ifnet *ifp, u_int q, u_int *work_done)
 	q &= NETMAP_RING_MASK;
 
 	if (netmap_verbose) {
-	        RD(5, "received %s queue %d", work_done ? "RX" : "TX" , q);
+	    printk("received %s queue %d\n", work_done ? "RX" : "TX" , q);
 	}
 
 	if (work_done) { /* RX path */
@@ -2996,7 +3018,6 @@ netmap_common_irq(struct ifnet *ifp, u_int q, u_int *work_done)
 		na->nm_notify(na, q, NR_TX, 0);
 	}
 }
-
 
 /*
  * Default functions to handle rx/tx interrupts from a physical device.
