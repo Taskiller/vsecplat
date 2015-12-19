@@ -274,7 +274,7 @@ static int get_addr_obj_from_str(struct addr_obj *obj, char *str)
 	return ret;
 }
 
-static char *persist_policy_entry(struct rte_json *json)
+static char *persist_json_entry(struct rte_json *json)
 {
 	char *txt_buf=NULL;
 	int len=0;
@@ -292,6 +292,109 @@ static char *persist_policy_entry(struct rte_json *json)
 	}
 
 	return txt_buf;
+}
+
+static struct duplicate_rule *global_duplicate_rule=NULL;
+static void vsecplat_store_duplicate_rule(char *json_txt)
+{
+    FILE *file=NULL;
+	file = fopen(VSECPLAT_DUPLICATE_RULE_FILE, "w");
+	if(NULL==file){
+		printf("Failed to open %s\n", VSECPLAT_DUPLICATE_RULE_FILE);
+		return;
+	}
+    if(NULL==json_txt){
+	    fprintf(file, "%s", " ");
+    }else{
+	    fprintf(file, "%s", json_txt);
+    }
+    return;
+}
+
+static int parse_duplicate_rule(struct duplicate_rule *duplicate_rule, struct rte_json *json)
+{
+    struct rte_json *item=NULL, *ips_entry=NULL, *tmp=NULL;
+    int entry_num=0, idx=0;
+
+    if(NULL==duplicate_rule){
+        return -1;
+    }
+
+    item = rte_object_get_item(json, "duplicate_rules"); 
+    if(NULL==item){
+        goto out;
+    }
+    if(item->type!=JSON_OBJECT){
+        goto out;
+    }
+
+    ips_entry = rte_object_get_item(item, "src_ips"); 
+    if(NULL!=ips_entry){
+        if(ips_entry->type != JSON_ARRAY) {
+            goto out;
+        }
+    }
+    entry_num = rte_array_get_size(ips_entry);
+    if(entry_num!=0){
+        for(idx=0; idx<entry_num; idx++){
+            tmp = rte_array_get_item(ips_entry, idx);
+            if(NULL==tmp){
+                // TOTO
+            }
+            get_addr_obj_from_str(duplicate_rule->src_ip+idx, tmp->u.val_str);
+        }
+    }
+
+    ips_entry = rte_object_get_item(item, "dst_ips");
+    if(NULL!=ips_entry){
+        if(ips_entry->type != JSON_ARRAY) {
+            goto out; 
+        }
+    }
+    entry_num = rte_array_get_size(ips_entry);
+    if(entry_num!=0){
+        for(idx=0; idx<entry_num; idx++){
+            tmp = rte_array_get_item(ips_entry, idx);
+            if(NULL==tmp){
+                // TOTO
+            }
+            get_addr_obj_from_str(duplicate_rule->dst_ip+idx, tmp->u.val_str);
+        }
+    }
+    duplicate_rule->json_txt = persist_json_entry(json);
+    if(NULL==duplicate_rule->json_txt){
+        // TODO
+    }
+    return 0;
+
+out:
+    return -1;
+}
+
+static int add_duplicate_rule(struct duplicate_rule *duplicate_rule)
+{
+    if(NULL==duplicate_rule){
+        return -1;
+    }
+	nm_mutex_lock(&global_duplicate_rule->mutex);	
+    memcpy(global_duplicate_rule->src_ip, duplicate_rule->src_ip, DUPLICATE_IP_MAX_NUM * sizeof(struct addr_obj));
+    memcpy(global_duplicate_rule->dst_ip, duplicate_rule->dst_ip, DUPLICATE_IP_MAX_NUM * sizeof(struct addr_obj));
+    if(duplicate_rule->json_txt){
+        vsecplat_store_duplicate_rule(duplicate_rule->json_txt);
+        global_duplicate_rule->json_txt = duplicate_rule->json_txt;
+    }
+	nm_mutex_unlock(&global_duplicate_rule->mutex);	
+    return 0;
+}
+
+static int del_duplicate_rule(void)
+{
+	nm_mutex_lock(&global_duplicate_rule->mutex);	
+    memset(global_duplicate_rule->src_ip, 0, DUPLICATE_IP_MAX_NUM * sizeof(struct addr_obj));
+    memset(global_duplicate_rule->dst_ip, 0, DUPLICATE_IP_MAX_NUM * sizeof(struct addr_obj));
+    free(global_duplicate_rule->json_txt);
+	nm_mutex_unlock(&global_duplicate_rule->mutex);	
+    return 0;
 }
 
 static struct forward_rules *parse_forward_rules(struct rte_json *json)
@@ -452,7 +555,7 @@ static struct forward_rules *parse_forward_rules(struct rte_json *json)
 			}
 		}
 
-		rule_entry->json_txt = persist_policy_entry(entry);
+		rule_entry->json_txt = persist_json_entry(entry);
 	#if 0
 		if(NULL!=rule_entry->json_txt){
 			printf("rule_entry->json_txt = %s\n", rule_entry->json_txt);
@@ -634,10 +737,10 @@ static void vsecplat_store_policy(void)
 	return;
 }
 
-
 int vsecplat_parse_policy(const char *buf)
 {
 	struct forward_rules *forward_rules=NULL;
+    struct duplicate_rule *duplicate_rule=NULL;
 	struct rte_json *json=NULL, *item=NULL;
 	int action=0;
 	int ret=0;	
@@ -683,9 +786,24 @@ int vsecplat_parse_policy(const char *buf)
 			rte_destroy_json(json);
 			global_vsecplat_config->guide_state=1;
 			return 0;
+        case NM_ADD_DUPLICATE_RULE:
+            duplicate_rule = (struct duplicate_rule *)malloc(sizeof(struct duplicate_rule));
+            if(NULL==duplicate_rule){
+                break;
+            }
+            memset(duplicate_rule, 0, sizeof(struct duplicate_rule));
+            ret=parse_duplicate_rule(duplicate_rule, json);
+            ret=add_duplicate_rule(duplicate_rule); 
+            free(duplicate_rule);
+            rte_destroy_json(json);
+            return 0;
+        case NM_DEL_DUPLICATE_RULE:
+            ret=del_duplicate_rule();
+            rte_destroy_json(json);
+            return 0;
 		default:
 			break;
-	}
+	};
 #if 0
 	if(action==NM_CHECK_RULES){
 		rte_destroy_json(json);
@@ -720,7 +838,6 @@ out:
 	return -1;
 }
 
-
 /*
  * if match return 1, otherwise return 0 
  **/
@@ -736,7 +853,7 @@ static inline int test_match_addr_obj(struct addr_obj *addr_obj, const u32 ip)
 	}
 	switch(addr_obj->type){
 		case IP_NULL:
-			return 1;
+			return 0; // the add_obj is empty
 		case IP_HOST:
 			// printf("IP_HOST: host_ip=0x%x\n", addr_obj->u.host_ip);
 			if((addr_obj->u.host_ip==0)||(addr_obj->u.host_ip==ip)){
@@ -804,6 +921,55 @@ static inline int test_match_num_obj(struct num_obj *num_obj, u32 num)
 	}
 
 	return 0;
+}
+
+int check_duplicate_rule(struct nm_skb *skb)
+{
+    u32 saddr=0, daddr=0;
+    int idx=0, ret=0;
+    int src_in_srcips=0, dst_in_srcips=0, dst_in_dstips=0;
+    struct addr_obj *ip_obj=NULL;
+	saddr = skb->nh.iph->saddr;
+	daddr = skb->nh.iph->daddr;
+    nm_mutex_lock(&global_duplicate_rule->mutex);
+    ip_obj = global_duplicate_rule->src_ip;
+    for(idx=0; idx<DUPLICATE_IP_MAX_NUM; idx++){
+        if((ip_obj+idx)->type==IP_NULL){ // the ip_obj is empty
+            break;
+        }
+        src_in_srcips = test_match_addr_obj(ip_obj+idx, saddr); 
+        if(src_in_srcips==1){ // match
+            break;
+        }
+    }
+
+    ip_obj = global_duplicate_rule->src_ip;
+    for(idx=0; idx<DUPLICATE_IP_MAX_NUM; idx++){
+        if((ip_obj+idx)->type==IP_NULL){
+            break;
+        }
+        dst_in_srcips = test_match_addr_obj(ip_obj+idx, daddr); 
+        if(dst_in_srcips==1){
+            break;
+        }
+    }
+
+    ip_obj = global_duplicate_rule->dst_ip;
+    for(idx=0; idx<DUPLICATE_IP_MAX_NUM; idx++){
+        if((ip_obj+idx)->type==IP_NULL){
+            break;
+        }
+        dst_in_dstips = test_match_addr_obj(ip_obj+idx, daddr); 
+        if(dst_in_dstips==1){
+            break;
+        }
+    }
+    nm_mutex_unlock(&global_duplicate_rule->mutex);
+    if((src_in_srcips==1)&&(dst_in_srcips==0)&&(dst_in_dstips==1)){
+        return NM_PKT_DROP;
+    }
+
+    return NM_PKT_FORWARD;
 }
 
 int get_forward_policy(struct nm_skb *skb)
@@ -883,7 +1049,48 @@ int init_policy_list(void)
 	INIT_LIST_HEAD(&fw_policy_list->list);
 	nm_mutex_init(&fw_policy_list->mutex);
 
+	global_duplicate_rule = (struct duplicate_rule*)malloc(sizeof(struct duplicate_rule));	
+	if(NULL==global_duplicate_rule){
+		return -1;
+	}
+	memset(global_duplicate_rule, 0, sizeof(struct duplicate_rule));
+	nm_mutex_init(&global_duplicate_rule->mutex);
+
 	return 0;
+}
+
+int vsecplat_load_duplicate_rule(void)
+{
+    int fd=0; 
+    int len=0;
+    struct stat stat_buf;
+    char *file_buf=NULL;
+
+    if(access(VSECPLAT_DUPLICATE_RULE_FILE, F_OK)){
+        return 0; // File not exist
+    }
+
+    memset(&stat_buf, 0, sizeof(struct stat));
+	stat(VSECPLAT_DUPLICATE_RULE_FILE, &stat_buf);
+	len = stat_buf.st_size;
+
+    file_buf = malloc(len);
+    if(NULL==file_buf){
+        printf("Failed to malloc buffer for loading duplicate rules.\n");
+        return -1;
+    }
+    memset(file_buf, 0, len);
+    fd = open(VSECPLAT_DUPLICATE_RULE_FILE, O_RDONLY);
+    if(fd<0){
+        free(file_buf);
+        return -1;
+    }
+    read(fd, file_buf, len);
+    close(fd);
+
+    vsecplat_parse_policy(file_buf);
+    free(file_buf);
+    return 0;
 }
 
 int vsecplat_load_policy(void)

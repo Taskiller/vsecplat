@@ -59,6 +59,14 @@ struct num_obj{
 	}u;
 };
 
+#define DUPLICATE_IP_MAX_NUM 32
+struct duplicate_rule{
+	struct nm_mutex mutex;
+    struct addr_obj src_ip[DUPLICATE_IP_MAX_NUM];
+    struct addr_obj dst_ip[DUPLICATE_IP_MAX_NUM];
+    char *json_txt;
+};
+
 struct rule_entry{
 	struct list_head list;
 	int id;
@@ -93,8 +101,11 @@ enum{
 	NM_DISABLE_MIRROR, // Stop report and forward
 	NM_ENABLE_MIRROR,
 	NM_DISABLE_GUIDE, // Stop forward
-	NM_ENABLE_GUIDE
+	NM_ENABLE_GUIDE,
+    NM_ADD_DUPLICATE_RULE,
+    NM_DEL_DUPLICATE_RULE
 };
+
 struct forward_rules_head{
 	struct list_head list;
 	// int count;
@@ -102,11 +113,14 @@ struct forward_rules_head{
 };
 
 #define VSECPLAT_POLICY_FILE "/mnt/rules.json"
+#define VSECPLAT_DUPLICATE_RULE_FILE "/mnt/duplicate_rule.json"
 
 int init_policy_list(void);
 int vsecplat_parse_policy(const char *buf);
 int get_forward_policy(struct nm_skb *skb);
+int check_duplicate_rule(struct nm_skb *skb);
 int create_policy_response(char *buf, int result, int report_state);
 int vsecplat_load_policy(void);
+int vsecplat_load_duplicate_rule(void);
 // int add_test_policy(void);
 #endif

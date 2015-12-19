@@ -40,6 +40,11 @@ static int nm_ipv4_recv(struct nm_skb *skb)
 		return NM_PKT_DROP;
 	}
 
+    ret = check_duplicate_rule(skb);
+    if(ret==NM_PKT_DROP){
+        return NM_PKT_DROP;
+    }
+
 	ret = get_forward_policy(skb);
 
 	return ret;	

@@ -101,6 +101,12 @@ int main(void)
 		return -1;
 	}
 
+    ret = vsecplat_load_duplicate_rule();
+    if(ret<0){
+        printf("Failed to load duplicate rules.\n");
+        return -1;
+    }
+
 	ret = vsecplat_load_policy();
 	if(ret<0){
 		printf("Failed to load policy.\n");
