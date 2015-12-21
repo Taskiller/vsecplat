@@ -27,7 +27,7 @@ static char response_buf[2048];
 static int conn_status=SOCKET_WANT_CONNECT;
 static int conn_sock=0;
 
-static int init_policy_buf()
+static int init_policy_buf(char *rule_file)
 {
 	int fd;
 	int len;
@@ -37,7 +37,7 @@ static int init_policy_buf()
 		return -1;
 	}
 	memset(policy_msg, 0, 2048);
-	fd = open("./add_rule.json", O_RDONLY);
+	fd = open(rule_file, O_RDONLY);
 	if(fd<0){
 		free(policy_msg);
 		policy_msg=NULL;
@@ -173,13 +173,16 @@ out:
 	return 0;
 }
 
-int main(void)
+int main(int argc, char *argv[])
 {
 	int sock=0;
 	struct sockaddr_in serv;
 	struct thread thread;
-
-	init_policy_buf();
+    if(argc!=2){
+        printf("Usage: %s RULE_FILE\n", argv[0]);
+        return 0;
+    }
+	init_policy_buf(argv[1]);
 
 	master = thread_master_create();
 	if(NULL==master){

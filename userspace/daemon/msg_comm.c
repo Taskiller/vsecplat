@@ -211,7 +211,7 @@ int vsecplat_deal_policy(struct thread *thread)
 	policy_conn_desc->recv_ofs += readlen;
 
 	if(policy_conn_desc->recv_ofs<policy_conn_desc->recv_len){ // recv not complete
-		printf("recv not complete: msg len=%d, readlen=%d\n", msg->len, readlen);
+		// printf("recv not complete: msg len=%d, readlen=%d\n", msg->len, readlen);
 		goto out;
 	}
 
@@ -224,7 +224,7 @@ int vsecplat_deal_policy(struct thread *thread)
 		nm_decrypt((unsigned int *)msg->data, msg->len-sizeof(struct msg_head));
 	}
 
-	printf("vsecplat_deal_policy readlen=%d, msg_len=%d type=%d contents:\n%s\n", readlen, msg->len, msg->msg_type, msg->data);
+	// printf("vsecplat_deal_policy readlen=%d, msg_len=%d type=%d contents:\n%s\n", readlen, msg->len, msg->msg_type, msg->data);
 	result = vsecplat_parse_policy(msg->data);
 
 	memset(msg->data, 0, policy_conn_desc->recv_len);
@@ -233,7 +233,7 @@ int vsecplat_deal_policy(struct thread *thread)
 		nm_log("Failed to create response.\n");
 		goto out;
 	}
-	printf("vsecplat_parse_policy response len=%ld, contents:\n%s\n", resp_len+sizeof(struct msg_head), msg->data);
+	// printf("vsecplat_parse_policy response len=%ld, contents:\n%s\n", resp_len+sizeof(struct msg_head), msg->data);
 	if(global_vsecplat_config->isencrypted){
 		resp_len = nm_encrypt((unsigned int *)msg->data, resp_len);
 	}
@@ -264,7 +264,7 @@ int vsecplat_listen_func(struct thread *thread)
 	int client_len;
 	struct sockaddr_in client;
 
-	printf("In vsecplat_listen_func.\n");
+	// printf("In vsecplat_listen_func.\n");
 	memset(&client, 0, sizeof(struct sockaddr_in));
 	client_len = sizeof(struct sockaddr_in);
 	accept_sock = accept(sock, (struct sockaddr *)&client, (socklen_t *)&client_len);

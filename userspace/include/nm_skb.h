@@ -8,6 +8,7 @@
 
 #define NM_PKT_DROP 	0
 #define NM_PKT_FORWARD 	1
+#define NM_PKT_DISCARD  2
 
 struct nm_skb{
 	struct list_head node;
@@ -43,18 +44,7 @@ struct nm_skb{
 	/* IP head */
 	union{
 		struct iphdr *iph;
-		struct arphdr *arph;
-		unsigned char *raw;
-	}nh;
-
-	union{
-		unsigned char *raw;
-	}mac;
-
-	__be16 protocol;
-	unsigned short vlanid;
-};
-
+		struct arphdr *arph; unsigned char *raw; }nh; union{ unsigned char *raw; }mac; __be16 protocol; unsigned short vlanid; }; 
 enum{
 	NETMAP_BUF=0,
 	MEMORY_BUF

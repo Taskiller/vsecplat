@@ -41,8 +41,8 @@ static int nm_ipv4_recv(struct nm_skb *skb)
 	}
 
     ret = check_duplicate_rule(skb);
-    if(ret==NM_PKT_DROP){
-        return NM_PKT_DROP;
+    if(ret==NM_PKT_DISCARD){
+        return NM_PKT_DISCARD;
     }
 
 	ret = get_forward_policy(skb);
@@ -145,7 +145,9 @@ void *packet_handle_thread(void *unused)
 			packet_send(skb);
 		}
 
-		vsecplat_record_pkt(skb);
+        if(ret!=NM_PKT_DISCARD){
+		    vsecplat_record_pkt(skb);
+        }
 	}while(1);
 
 	return unused;
