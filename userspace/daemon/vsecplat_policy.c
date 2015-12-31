@@ -120,21 +120,13 @@ static inline void masklen2ip(int masklen, struct in_addr *netmask)
   return;
 }
 
-/*
- * return:
- * -1 for error
- *  0 for normal format
- *  1 for not format
- * */
-static int get_num_obj_from_str(struct num_obj *obj, char *str)
+static int get_num_obj_from_str(struct num_obj_entry *obj, char *str)
 {
 	char *pos=NULL, *end=NULL, *orig=NULL;
-	int val=0, idx=0;
+	int val=0;
+//	int idx=0;
 	int ret=0;
-	if(str[0]=='!'){
-		ret=1;
-		str = str + 1;
-	}
+
 	pos = orig = str;
 	end = str+strlen(str)+1;
 	while(pos<end){
@@ -145,6 +137,7 @@ static int get_num_obj_from_str(struct num_obj *obj, char *str)
 			pos++;
 			obj->u.range.max = atoi(pos);
 			break;
+	#if 0
 		}else if(*pos=='|'){
 			obj->type = NUM_GROUP;
 			*pos='\0';
@@ -156,6 +149,7 @@ static int get_num_obj_from_str(struct num_obj *obj, char *str)
 			obj->num_mask |= val;
 			idx++;
 			orig = pos + 1;
+	#endif
 		}else if(*pos=='\0'){
 			if(!obj->type){
 				obj->type = NUM_SINGLE;
@@ -164,7 +158,8 @@ static int get_num_obj_from_str(struct num_obj *obj, char *str)
 			if(val==0){
 				obj->num_mask = 0xffffffff;
 			}
-			obj->u.group.num[idx] = val; // when type is NUM_SIGNLE, it's also ok
+			// obj->u.group.num[idx] = val; // when type is NUM_SIGNLE, it's also ok
+			obj->u.num = val;
 			obj->num_mask |= val;
 		}
 		pos++;
@@ -177,20 +172,56 @@ static int get_num_obj_from_str(struct num_obj *obj, char *str)
  * return:
  * -1 for error
  *  0 for normal format
- *  1 for not format
+ *  1 for not format !(
  * */
-static int get_addr_obj_from_str(struct addr_obj *obj, char *str)
+static int parse_num_objs(struct list_head *head, char *str)
+{
+	int format=0, ret=0;
+	char *pos=NULL, *end=NULL;
+	struct num_obj_entry *obj=NULL;
+	
+	end = str + strlen(str) + 1;
+	if(str[0]=='!'){ // It's !(xxx) format
+		format = 1;
+		str = str + 2; // skip !(
+	}
+
+	pos = str;
+	while(pos<end){
+		if((*pos=='|')||(*pos=='\0')){
+			*pos = '\0';
+
+			obj = (struct num_obj_entry *)malloc(sizeof(struct num_obj_entry));
+			if(NULL==obj){
+				return -1;
+			}
+			memset(obj, 0, sizeof(struct num_obj_entry));
+			INIT_LIST_HEAD(&obj->list);
+
+			ret = get_num_obj_from_str(obj, str);
+			if(ret<0){
+				//TODO
+				printf("something wrong, str=%s.\n", str);
+				return -1;
+			}
+			list_add_tail(&obj->list, head);	
+			str = pos + 1;
+		}
+		pos = pos + 1;
+	}
+
+	return format;
+}
+
+static int get_addr_obj_from_str(struct addr_obj_entry *obj, char *str)
 {
 	char *pos=NULL, *end=NULL, *orig=NULL;
-	int val=0, idx=0;
+	int val=0;
+//	int idx=0;
 	struct in_addr addr;
-	int ret=0;
 	int star_num=0;
+	int ret=0;
 
-	if(str[0]=='!'){ // not format
-		ret = 1;
-		str = str + 1;
-	}
 	pos = orig = str;
 	end = str+strlen(str)+1;
 	while(pos<end){
@@ -228,6 +259,7 @@ static int get_addr_obj_from_str(struct addr_obj *obj, char *str)
 			obj->u.net.length = addr.s_addr;
 			obj->addr_mask = obj->u.net.mask|(~obj->u.net.length);
 			break;
+	#if 0
 		}else if(*pos=='|'){ // group
 			obj->type = IP_GROUP;
 			*pos = '\0';
@@ -242,6 +274,7 @@ static int get_addr_obj_from_str(struct addr_obj *obj, char *str)
 			obj->addr_mask |= addr.s_addr;
 			idx++;
 			orig = pos + 1;
+	#endif
 		}else if(*pos=='*'){ // same as net mask
 			obj->type = IP_NET_MASK;
 			*pos='0';
@@ -257,7 +290,8 @@ static int get_addr_obj_from_str(struct addr_obj *obj, char *str)
 			if(addr.s_addr==0){
 				obj->addr_mask = 0xffffffff;
 			}
-			obj->u.group.ip_addrs[idx] = addr.s_addr;
+			obj->u.host_ip = addr.s_addr;
+			// obj->u.group.ip_addrs[idx] = addr.s_addr;
 			obj->addr_mask |= addr.s_addr;
 			if(star_num){
 				val = (4-star_num)*8;
@@ -272,6 +306,51 @@ static int get_addr_obj_from_str(struct addr_obj *obj, char *str)
 	}
 
 	return ret;
+}
+
+/*
+ * return:
+ * -1 for error
+ *  0 for normal format
+ *  1 for not format
+ * */
+static int parse_addr_objs(struct list_head *head, char *str)
+{
+	int format=0, ret=0;
+	struct addr_obj_entry *obj=NULL;
+	char *pos=NULL, *end=NULL;
+
+	end = str + strlen(str) + 1;
+
+	if(str[0]=='!'){ // It's !(xxx) format
+		ret = 1;
+		str = str + 2; // skip !(
+	}
+	
+	pos = str;
+	while(pos<end){
+		if((*pos=='|')||(*pos=='\0')){
+			*pos = '\0';
+			obj = (struct addr_obj_entry *)malloc(sizeof(struct addr_obj_entry));
+			if(NULL==obj){
+				//TODO
+				return -1;
+			}
+			memset(obj, 0, sizeof(struct addr_obj_entry));	
+			ret = get_addr_obj_from_str(obj, str);
+			if(ret<0){
+				//TODO
+				printf("something wrong, str=%s.\n", str);
+				return -1;
+			}
+			INIT_LIST_HEAD(&obj->list);
+			list_add_tail(&obj->list, head);	
+			str = pos + 1;
+		}
+		pos = pos + 1;
+	}
+
+	return format;
 }
 
 static char *persist_json_entry(struct rte_json *json)
@@ -316,6 +395,7 @@ static int parse_duplicate_rule(struct duplicate_rule *duplicate_rule, struct rt
 {
     struct rte_json *item=NULL, *ips_entry=NULL, *tmp=NULL;
     int entry_num=0, idx=0;
+	int ret=0;
 
     if(NULL==duplicate_rule){
         return -1;
@@ -347,7 +427,10 @@ static int parse_duplicate_rule(struct duplicate_rule *duplicate_rule, struct rt
             if(NULL==tmp){
                 goto out;
             }
-            get_addr_obj_from_str(duplicate_rule->src_ip+idx, tmp->u.val_str);
+            ret = get_addr_obj_from_str(duplicate_rule->src_ip+idx, tmp->u.val_str);
+			if(ret<0){
+				//TODO
+			}
         }
     }
 
@@ -364,7 +447,10 @@ static int parse_duplicate_rule(struct duplicate_rule *duplicate_rule, struct rt
             if(NULL==tmp){
                 goto out;
             }
-            get_addr_obj_from_str(duplicate_rule->dst_ip+idx, tmp->u.val_str);
+            ret = get_addr_obj_from_str(duplicate_rule->dst_ip+idx, tmp->u.val_str);
+			if(ret<0){
+				//TODO
+			}
         }
     }
 
@@ -381,8 +467,8 @@ static int add_duplicate_rule(struct duplicate_rule *duplicate_rule)
         return -1;
     }
 	nm_mutex_lock(&global_duplicate_rule->mutex);	
-    memcpy(global_duplicate_rule->src_ip, duplicate_rule->src_ip, DUPLICATE_IP_MAX_NUM * sizeof(struct addr_obj));
-    memcpy(global_duplicate_rule->dst_ip, duplicate_rule->dst_ip, DUPLICATE_IP_MAX_NUM * sizeof(struct addr_obj));
+    memcpy(global_duplicate_rule->src_ip, duplicate_rule->src_ip, DUPLICATE_IP_MAX_NUM * sizeof(struct addr_obj_entry));
+    memcpy(global_duplicate_rule->dst_ip, duplicate_rule->dst_ip, DUPLICATE_IP_MAX_NUM * sizeof(struct addr_obj_entry));
     if(duplicate_rule->json_txt){
         vsecplat_store_duplicate_rule(duplicate_rule->json_txt);
         global_duplicate_rule->json_txt = duplicate_rule->json_txt;
@@ -394,12 +480,24 @@ static int add_duplicate_rule(struct duplicate_rule *duplicate_rule)
 static int del_duplicate_rule(void)
 {
 	nm_mutex_lock(&global_duplicate_rule->mutex);	
-    memset(global_duplicate_rule->src_ip, 0, DUPLICATE_IP_MAX_NUM * sizeof(struct addr_obj));
-    memset(global_duplicate_rule->dst_ip, 0, DUPLICATE_IP_MAX_NUM * sizeof(struct addr_obj));
+    memset(global_duplicate_rule->src_ip, 0, DUPLICATE_IP_MAX_NUM * sizeof(struct addr_obj_entry));
+    memset(global_duplicate_rule->dst_ip, 0, DUPLICATE_IP_MAX_NUM * sizeof(struct addr_obj_entry));
     free(global_duplicate_rule->json_txt);
     unlink(VSECPLAT_DUPLICATE_RULE_FILE);
 	nm_mutex_unlock(&global_duplicate_rule->mutex);	
     return 0;
+}
+
+static inline void init_rule_entry(struct rule_entry *entry)
+{
+	memset(entry, 0, sizeof(struct rule_entry));
+	INIT_LIST_HEAD(&entry->sip);	
+	INIT_LIST_HEAD(&entry->dip);	
+	INIT_LIST_HEAD(&entry->sport);	
+	INIT_LIST_HEAD(&entry->dport);	
+	INIT_LIST_HEAD(&entry->proto);	
+	INIT_LIST_HEAD(&entry->vlanid);	
+	return;
 }
 
 static struct forward_rules *parse_forward_rules(struct rte_json *json)
@@ -445,7 +543,8 @@ static struct forward_rules *parse_forward_rules(struct rte_json *json)
 			nm_log("Failed to alloc rule_entry %d.\n", idx);
 			goto out;
 		}
-		memset(rule_entry, 0, sizeof(struct rule_entry));	
+		init_rule_entry(rule_entry);
+		// memset(rule_entry, 0, sizeof(struct rule_entry));	
 		*(forward_rules->rule_entry+idx)=rule_entry;
 	}
 
@@ -477,7 +576,7 @@ static struct forward_rules *parse_forward_rules(struct rte_json *json)
 			if(tmp->type != JSON_STRING){
 				goto out;
 			}
-			not_flag=get_addr_obj_from_str(&(rule_entry->sip), tmp->u.val_str);
+			not_flag=parse_addr_objs(&(rule_entry->sip), tmp->u.val_str);
 			if(not_flag>0){
 				rule_entry->rule_not_flag |= RULE_NOT_SIP;
 			}
@@ -488,7 +587,7 @@ static struct forward_rules *parse_forward_rules(struct rte_json *json)
 			if(tmp->type != JSON_STRING){
 				goto out;
 			}
-			not_flag = get_addr_obj_from_str(&(rule_entry->dip), tmp->u.val_str);
+			not_flag = parse_addr_objs(&(rule_entry->dip), tmp->u.val_str);
 			if(not_flag>0){
 				rule_entry->rule_not_flag |= RULE_NOT_DIP;
 			}
@@ -499,7 +598,7 @@ static struct forward_rules *parse_forward_rules(struct rte_json *json)
 			if(tmp->type != JSON_STRING){
 				goto out;
 			}
-			not_flag = get_num_obj_from_str(&(rule_entry->sport), tmp->u.val_str);
+			not_flag = parse_num_objs(&(rule_entry->sport), tmp->u.val_str);
 			if(not_flag>0){
 				rule_entry->rule_not_flag |= RULE_NOT_SPORT;
 			}
@@ -510,7 +609,7 @@ static struct forward_rules *parse_forward_rules(struct rte_json *json)
 			if(tmp->type != JSON_STRING){
 				goto out;
 			}
-			not_flag = get_num_obj_from_str(&(rule_entry->dport), tmp->u.val_str);
+			not_flag = parse_num_objs(&(rule_entry->dport), tmp->u.val_str);
 			if(not_flag>0){
 				rule_entry->rule_not_flag |= RULE_NOT_DPORT;
 			}
@@ -521,7 +620,7 @@ static struct forward_rules *parse_forward_rules(struct rte_json *json)
 			if(tmp->type != JSON_STRING){
 				goto out;
 			}
-			not_flag = get_num_obj_from_str(&(rule_entry->proto), tmp->u.val_str);
+			not_flag = parse_num_objs(&(rule_entry->proto), tmp->u.val_str);
 			if(not_flag>0){
 				rule_entry->rule_not_flag |= RULE_NOT_PROTO;
 			}
@@ -532,7 +631,7 @@ static struct forward_rules *parse_forward_rules(struct rte_json *json)
 			if(tmp->type != JSON_STRING){
 				goto out;
 			}
-			not_flag = get_num_obj_from_str(&(rule_entry->vlanid), tmp->u.val_str);
+			not_flag = parse_num_objs(&(rule_entry->vlanid), tmp->u.val_str);
 			if(not_flag>0){
 				rule_entry->rule_not_flag |= RULE_NOT_VLANID;
 			}
@@ -646,7 +745,55 @@ int create_policy_response(char *buf, int result, int report_state)
 	return len;
 }
 
+static int free_rule_entry(struct rule_entry *entry)
+{
+	struct list_head *pos=NULL, *n=NULL;
+	struct addr_obj_entry *addr_obj=NULL;	
+	struct num_obj_entry *num_obj=NULL;	
+
+	list_for_each_safe(pos, n, &entry->sip){
+		list_del(pos);
+		addr_obj=list_entry(pos, struct addr_obj_entry, list);
+		free(addr_obj);
+	}
+
+	list_for_each_safe(pos, n, &entry->dip){
+		list_del(pos);
+		addr_obj=list_entry(pos, struct addr_obj_entry, list);
+		free(addr_obj);
+	}
+
+	list_for_each_safe(pos, n, &entry->sport){
+		list_del(pos);
+		num_obj=list_entry(pos, struct num_obj_entry, list);
+		free(num_obj);
+	}
+
+	list_for_each_safe(pos, n, &entry->dport){
+		list_del(pos);
+		num_obj=list_entry(pos, struct num_obj_entry, list);
+		free(num_obj);
+	}
+
+	list_for_each_safe(pos, n, &entry->proto){
+		list_del(pos);
+		num_obj=list_entry(pos, struct num_obj_entry, list);
+		free(num_obj);
+	}
+
+	list_for_each_safe(pos, n, &entry->vlanid){
+		list_del(pos);
+		num_obj=list_entry(pos, struct num_obj_entry, list);
+		free(num_obj);
+	}
+
+	free(entry);
+
+	return 0;
+}
+
 static struct forward_rules_head *fw_policy_list=NULL;
+#if 0
 static int vsecplat_clear_policy(struct forward_rules *forward_rules)
 {
 	struct list_head *pos=NULL, *n=NULL;
@@ -663,13 +810,14 @@ static int vsecplat_clear_policy(struct forward_rules *forward_rules)
 				if(NULL!=pos_entry->json_txt){
 					free(pos_entry->json_txt);
 				}
-				free(pos_entry);
+				free_rule_entry(pos_entry);
 			}
 		}
 	}
 	nm_mutex_unlock(&fw_policy_list->mutex);
 	return 0;
 }
+#endif
 
 static int vsecplat_del_policy(struct forward_rules *forward_rules)
 {
@@ -687,13 +835,13 @@ static int vsecplat_del_policy(struct forward_rules *forward_rules)
 				if(NULL!=pos_entry->json_txt){
 					free(pos_entry->json_txt);
 				}
-				free(pos_entry);
+				free_rule_entry(pos_entry);
 			}
 		}
 	}
 	nm_mutex_unlock(&fw_policy_list->mutex);
 	for(rule_idx=0;rule_idx<forward_rules->rule_num;rule_idx++){
-		free(*(forward_rules->rule_entry+rule_idx));
+		free_rule_entry(*(forward_rules->rule_entry+rule_idx));
 	}
 	return 0;
 }
@@ -702,9 +850,10 @@ static int vsecplat_add_policy(struct forward_rules *forward_rules)
 {
 	int rule_idx=0;
 	struct rule_entry *rule_entry=NULL;
-
+#if 0
 	// First, delete the rule with the same id
 	vsecplat_clear_policy(forward_rules);
+#endif
 
 	nm_mutex_lock(&fw_policy_list->mutex);	
 	for(rule_idx=0; rule_idx<forward_rules->rule_num; rule_idx++){
@@ -774,10 +923,10 @@ int vsecplat_parse_policy(const char *buf)
 	}
 	action = item->u.val_int;
 	switch(action){
-		case NM_CHECK_RULES:
+		case NM_CHECK_RULES:  // Maybe no use
 			rte_destroy_json(json);
 			return 0;
-		case NM_DISABLE_MIRROR:
+		case NM_DISABLE_MIRROR: //
 			rte_destroy_json(json);
 			global_vsecplat_config->mirror_state=0;
 			return 0;
@@ -860,9 +1009,8 @@ out:
 /*
  * if match return 1, otherwise return 0 
  **/
-static inline int test_match_addr_obj(struct addr_obj *addr_obj, const u32 ip)
+static inline int test_match_addr_obj(struct addr_obj_entry *addr_obj, const u32 ip)
 {
-	int i=0;
 	// printf("addr_mask=0x%x, type=%d, ip=0x%x\n", addr_obj->addr_mask, addr_obj->type, ip);
 	if(addr_obj->addr_mask==0xffffffff){
 		return 1;
@@ -891,6 +1039,7 @@ static inline int test_match_addr_obj(struct addr_obj *addr_obj, const u32 ip)
 				return 1;
 			}
 			break;
+	#if 0
 		case IP_GROUP:
 			for(i=0;i<GROUP_ITEM_MAX_NUM;i++){
 				if(ip==addr_obj->u.group.ip_addrs[i]){
@@ -898,16 +1047,32 @@ static inline int test_match_addr_obj(struct addr_obj *addr_obj, const u32 ip)
 				}
 			}
 			break;
+	#endif
 		default:
 			break;
 	}
 	return 0;
 }
 
-static inline int test_match_num_obj(struct num_obj *num_obj, u32 num)
+static inline int check_addr_obj_list(struct list_head *head, const u32 ip)
 {
-	int i=0;
+	struct list_head *pos=NULL;	
+	struct addr_obj_entry *entry=NULL;
 
+	list_for_each(pos, head){
+		entry = list_entry(pos, struct addr_obj_entry, list);
+		if(NULL==entry){
+			//  TODO
+		}
+		if(test_match_addr_obj(entry, ip)){ // match
+			return 1;	
+		}
+	}
+	return 0;
+}
+
+static inline int test_match_num_obj(struct num_obj_entry *num_obj, u32 num)
+{
 	if(num_obj->num_mask==0xffffffff){
 		return 1;
 	}
@@ -928,6 +1093,7 @@ static inline int test_match_num_obj(struct num_obj *num_obj, u32 num)
 				return 1;
 			}
 			break;
+	#if 0
 		case NUM_GROUP:
 			for(i=0;i<GROUP_ITEM_MAX_NUM;i++){
 				if(num==num_obj->u.group.num[i]){
@@ -935,10 +1101,27 @@ static inline int test_match_num_obj(struct num_obj *num_obj, u32 num)
 				}
 			}
 			break;
+	#endif
 		default:
 			break;
 	}
+	return 0;
+}
 
+static inline int check_num_obj_list(struct list_head *head, u32 num)
+{
+	struct list_head *pos=NULL;
+	struct num_obj_entry *entry = NULL;
+
+	list_for_each(pos, head){
+		entry = list_entry(pos, struct num_obj_entry, list);
+		if(NULL==entry){
+			// TODO
+		}
+		if(test_match_num_obj(entry, num)){ // match
+			return 1;
+		}
+	}
 	return 0;
 }
 
@@ -947,7 +1130,7 @@ int check_duplicate_rule(struct nm_skb *skb)
     u32 saddr=0, daddr=0;
     int idx=0;
     int src_in_srcips=0, dst_in_srcips=0, dst_in_dstips=0;
-    struct addr_obj *ip_obj=NULL;
+    struct addr_obj_entry *ip_obj=NULL;
 	saddr = skb->nh.iph->saddr;
 	daddr = skb->nh.iph->daddr;
     nm_mutex_lock(&global_duplicate_rule->mutex);
@@ -1018,31 +1201,31 @@ int get_forward_policy(struct nm_skb *skb)
 	nm_mutex_lock(&fw_policy_list->mutex);	
 	list_for_each(pos, &fw_policy_list->list){
 		rule_entry = list_entry(pos, struct rule_entry, list);
-		if(!(((rule_entry->rule_not_flag&RULE_NOT_SIP)==RULE_NOT_SIP)^test_match_addr_obj(&rule_entry->sip, saddr))){
+		if(!(((rule_entry->rule_not_flag&RULE_NOT_SIP)==RULE_NOT_SIP)^check_addr_obj_list(&rule_entry->sip, saddr))){
 			// printf("SIP NOT match.\n");
 			continue;
 		}
-		if(!(((rule_entry->rule_not_flag&RULE_NOT_DIP)==RULE_NOT_DIP)^test_match_addr_obj(&rule_entry->dip, daddr))){
+		if(!(((rule_entry->rule_not_flag&RULE_NOT_DIP)==RULE_NOT_DIP)^check_addr_obj_list(&rule_entry->dip, daddr))){
 			// printf("DIP NOT match.\n");
 			continue;
 		}
 
-		if(!(((rule_entry->rule_not_flag&RULE_NOT_SPORT)==RULE_NOT_SPORT)^test_match_num_obj(&rule_entry->sport, sport))){
+		if(!(((rule_entry->rule_not_flag&RULE_NOT_SPORT)==RULE_NOT_SPORT)^check_num_obj_list(&rule_entry->sport, sport))){
 			// printf("SPORT NOT match. rule_entry->sport: mask=%d, num=%d, sport=%d\n", rule_entry->sport.num_mask, rule_entry->sport.u.num, sport);
 			continue;
 		}
 
-		if(!(((rule_entry->rule_not_flag&RULE_NOT_DPORT)==RULE_NOT_DPORT)^test_match_num_obj(&rule_entry->dport, dport))){
+		if(!(((rule_entry->rule_not_flag&RULE_NOT_DPORT)==RULE_NOT_DPORT)^check_num_obj_list(&rule_entry->dport, dport))){
 			// printf("DPORT NOT match. rule_entry->dport: mask=%d, num=%d, dport=%d\n", rule_entry->dport.num_mask, rule_entry->dport.u.num, dport);
 			continue;
 		}
 
-		if(!(((rule_entry->rule_not_flag&RULE_NOT_PROTO)==RULE_NOT_PROTO)^test_match_num_obj(&rule_entry->proto, proto))){
+		if(!(((rule_entry->rule_not_flag&RULE_NOT_PROTO)==RULE_NOT_PROTO)^check_num_obj_list(&rule_entry->proto, proto))){
 			// printf("PROTO NOT match.\n");
 			continue;
 		}
 
-		if(!(((rule_entry->rule_not_flag&RULE_NOT_VLANID)==RULE_NOT_VLANID)^test_match_num_obj(&rule_entry->vlanid, vlanid))){
+		if(!(((rule_entry->rule_not_flag&RULE_NOT_VLANID)==RULE_NOT_VLANID)^check_num_obj_list(&rule_entry->vlanid, vlanid))){
 			// printf("VLANID NOT match.\n");
 			continue;
 		}

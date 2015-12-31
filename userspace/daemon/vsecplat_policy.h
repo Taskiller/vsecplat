@@ -4,7 +4,7 @@
 #include "nm_skb.h"
 #include "nm_mutex.h"
 
-#define GROUP_ITEM_MAX_NUM 16
+// #define GROUP_ITEM_MAX_NUM 16
 /*
  * type:
  * 	1: 10.0.0.1
@@ -17,9 +17,10 @@ enum{
 	IP_HOST,
 	IP_NET_MASK,
 	IP_RANGE,
-	IP_GROUP
+//	IP_GROUP
 };
-struct addr_obj{
+struct addr_obj_entry{
+	struct list_head list;
 	int type;
 	u32 addr_mask;
 	union{
@@ -32,9 +33,11 @@ struct addr_obj{
 			u32 mask;
 			u32 length;
 		}net;
+	#if 0
 		struct{
 			u32 ip_addrs[GROUP_ITEM_MAX_NUM];
 		}group;
+	#endif
 	}u;
 };
 
@@ -42,9 +45,10 @@ enum{
 	NUM_NULL,
 	NUM_SINGLE,
 	NUM_RANGE,
-	NUM_GROUP
+//	NUM_GROUP
 };
-struct num_obj{
+struct num_obj_entry{
+	struct list_head list;
 	int type;
 	u32 num_mask;
 	union{
@@ -53,17 +57,19 @@ struct num_obj{
 			u32 min;
 			u32 max;
 		}range;
+	#if 0
 		struct{
 			u32 num[GROUP_ITEM_MAX_NUM];
 		}group;
+	#endif
 	}u;
 };
 
 #define DUPLICATE_IP_MAX_NUM 32
 struct duplicate_rule{
 	struct nm_mutex mutex;
-    struct addr_obj src_ip[DUPLICATE_IP_MAX_NUM];
-    struct addr_obj dst_ip[DUPLICATE_IP_MAX_NUM];
+    struct addr_obj_entry src_ip[DUPLICATE_IP_MAX_NUM];
+    struct addr_obj_entry dst_ip[DUPLICATE_IP_MAX_NUM];
     char *json_txt;
 };
 
@@ -80,12 +86,12 @@ struct rule_entry{
 #define RULE_NOT_PROTO  (1<<4)
 #define RULE_NOT_VLANID  (1<<5)
 	int rule_not_flag;
-	struct addr_obj sip;
-	struct addr_obj dip;
-	struct num_obj sport;
-	struct num_obj dport;
-	struct num_obj proto;
-	struct num_obj vlanid;
+	struct list_head sip;
+	struct list_head dip;
+	struct list_head sport;
+	struct list_head dport;
+	struct list_head proto;
+	struct list_head vlanid;
 	char *json_txt;
 };
 

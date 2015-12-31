@@ -20,7 +20,7 @@ ftp -nv 192.168.1.145<<EOF
 user anonymous anonymous
 binary
 put netmap_lin.ko
-put e1000.ko
+# put e1000.ko
 put virtio_net.ko
 quit
 EOF
