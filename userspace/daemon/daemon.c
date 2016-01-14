@@ -57,6 +57,12 @@ int main(void)
 		return -1;
 	}
 
+	ret = init_recurs_dst_mac_list();
+	if(ret<0){
+		printf("Failed to init recursive dstmac list.\n");
+		return -1;
+	}
+
 	// Init forward policy desc: fw_policy_list
 	ret = init_policy_list();
 	if(ret<0){

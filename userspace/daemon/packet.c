@@ -83,6 +83,11 @@ static int packet_intercept(struct nm_skb *skb)
 
 	skb->mac.raw = skb->data;
 
+	ret = check_recursive_packet(skb);
+	if(ret==NM_PKT_DISCARD){
+		return NM_PKT_DISCARD;
+	}
+
 	eth_type_trans(skb);
 	switch(ntohs(skb->protocol)){
 		case ETH_P_IP:

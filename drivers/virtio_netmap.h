@@ -302,6 +302,7 @@ virtio_netmap_reg(struct netmap_adapter *na, int onoff)
 		 * memory, otherwise we have leakage.
 		 */
 		free_unused_bufs(vi);
+
 		/* Also free the pages allocated by the driver. */
 		free_receive_bufs(vi);
 
@@ -483,13 +484,18 @@ virtio_netmap_rxsync(struct netmap_kring *kring, int flags)
 		uint16_t slot_flags = kring->nkr_slot_flags;
 		struct netmap_adapter *token;
 
+
 		nm_i = kring->nr_hwtail;
 		n = 0;
 		for (;;) {
 			int len;
+
 			token = virtqueue_get_buf(vq, &len);
 			if (token == NULL)
 				break;
+
+			printk(KERN_ERR "slot_flags=0x%x nr_hwtail=%d, nr_hwcur=%d, tail=%d, cur=%d, n=%d\n",
+				slot_flags, kring->nr_hwtail, kring->nr_hwcur, ring->tail, ring->cur, n);
 
             RXNUM_DEC(vi, ring_nr);
 
@@ -617,6 +623,7 @@ virtio_netmap_init_buffers(struct SOFTC_T *vi)
 			addr += NM_HEAD_OFFSET;
 			sg_set_buf(sg + 1, addr, ring->nr_buf_size);
 			err = virtqueue_add_inbuf(vq, sg, 2, na, GFP_ATOMIC);
+			// printk("i=%d, addr=%p, err=%d\n", i, addr, err);
 			if (err < 0) {
 				D("virtqueue_add_inbuf failed");
 
@@ -649,7 +656,7 @@ virtio_netmap_config(struct netmap_adapter *na, u_int *txr, u_int *txd,
 	*txd = virtqueue_get_vring_size(GET_TX_VQ(vi, 0));
 	*rxr = 1;
 	*rxd = virtqueue_get_vring_size(GET_RX_VQ(vi, 0));
-	printk("virtio config txq=%d, txd=%d rxq=%d, rxd=%d\n", *txr, *txd, *rxr, *rxd);
+	// printk("virtio config txq=%d, txd=%d rxq=%d, rxd=%d\n", *txr, *txd, *rxr, *rxd);
 
 	return 0;
 }

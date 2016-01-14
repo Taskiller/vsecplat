@@ -73,12 +73,18 @@ struct duplicate_rule{
     char *json_txt;
 };
 
+struct recurs_dstmac{
+	struct list_head list;
+	unsigned char dst_mac[NM_MAC_LEN];
+};
+
 struct rule_entry{
 	struct list_head list;
 	int id;
 	int forward;
 	int conversion;
 	unsigned char dst_mac[NM_MAC_LEN];
+    struct recurs_dstmac *recurs_dstmac;
 #define RULE_NOT_SIP  (1<<0)
 #define RULE_NOT_DIP  (1<<1)
 #define RULE_NOT_SPORT  (1<<2)
@@ -118,11 +124,18 @@ struct forward_rules_head{
 	struct nm_mutex mutex;
 };
 
+struct recurs_dstmac_head{
+	struct list_head list;
+	struct nm_mutex mutex;
+};
+
 #define VSECPLAT_POLICY_FILE "/mnt/rules.json"
 #define VSECPLAT_DUPLICATE_RULE_FILE "/mnt/duplicate_rule.json"
 
+int init_recurs_dst_mac_list(void);
 int init_policy_list(void);
 int vsecplat_parse_policy(const char *buf);
+int check_recursive_packet(struct nm_skb *skb);
 int get_forward_policy(struct nm_skb *skb);
 int check_duplicate_rule(struct nm_skb *skb);
 int create_policy_response(char *buf, int result, int report_state);

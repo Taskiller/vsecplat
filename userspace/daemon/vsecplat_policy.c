@@ -792,6 +792,7 @@ static int free_rule_entry(struct rule_entry *entry)
 	return 0;
 }
 
+static struct recurs_dstmac_head *recurs_dstmac_head=NULL;
 static struct forward_rules_head *fw_policy_list=NULL;
 #if 0
 static int vsecplat_clear_policy(struct forward_rules *forward_rules)
@@ -819,6 +820,24 @@ static int vsecplat_clear_policy(struct forward_rules *forward_rules)
 }
 #endif
 
+static int del_recurs_dst_mac(struct rule_entry *rule_entry)
+{
+    struct list_head *pos=NULL;
+    struct recurs_dstmac *dstmac=NULL;
+    if(0==rule_entry->conversion){
+        return 0;
+    }
+
+	nm_mutex_lock(&recurs_dstmac_head->mutex);	
+    dstmac = rule_entry->recurs_dstmac; 
+    pos = &dstmac->list;
+    list_del(pos);
+    free(dstmac);
+	nm_mutex_unlock(&recurs_dstmac_head->mutex);	
+
+	return 0;
+}
+
 static int vsecplat_del_policy(struct forward_rules *forward_rules)
 {
 	struct list_head *pos=NULL, *n=NULL;
@@ -835,6 +854,7 @@ static int vsecplat_del_policy(struct forward_rules *forward_rules)
 				if(NULL!=pos_entry->json_txt){
 					free(pos_entry->json_txt);
 				}
+				del_recurs_dst_mac(pos_entry);
 				free_rule_entry(pos_entry);
 			}
 		}
@@ -844,6 +864,30 @@ static int vsecplat_del_policy(struct forward_rules *forward_rules)
 		free_rule_entry(*(forward_rules->rule_entry+rule_idx));
 	}
 	return 0;
+}
+
+static int add_recurs_dst_mac(struct rule_entry *rule_entry)
+{
+    struct recurs_dstmac *dstmac=NULL;
+    if(0==rule_entry->conversion){
+        return 0;
+    }
+
+	nm_mutex_lock(&recurs_dstmac_head->mutex);	
+    dstmac = (struct recurs_dstmac *)malloc(sizeof(struct recurs_dstmac));	
+    if(NULL==dstmac){
+	    nm_mutex_unlock(&recurs_dstmac_head->mutex);	
+        return -1;
+    }
+    memset(dstmac, 0, sizeof(struct recurs_dstmac));
+    INIT_LIST_HEAD(&dstmac->list);
+    memcpy(dstmac->dst_mac, rule_entry->dst_mac, NM_MAC_LEN);
+    list_add_tail(&dstmac->list, &recurs_dstmac_head->list);
+    rule_entry->recurs_dstmac = dstmac;
+
+	nm_mutex_unlock(&recurs_dstmac_head->mutex);	
+
+    return 0;
 }
 
 static int vsecplat_add_policy(struct forward_rules *forward_rules)
@@ -859,6 +903,7 @@ static int vsecplat_add_policy(struct forward_rules *forward_rules)
 	for(rule_idx=0; rule_idx<forward_rules->rule_num; rule_idx++){
 		rule_entry = *(forward_rules->rule_entry+rule_idx);
 		INIT_LIST_HEAD(&rule_entry->list);
+		add_recurs_dst_mac(rule_entry);
 		list_add_tail(&rule_entry->list, &fw_policy_list->list);
 	}	
 	nm_mutex_unlock(&fw_policy_list->mutex);	
@@ -1178,6 +1223,24 @@ int check_duplicate_rule(struct nm_skb *skb)
     return NM_PKT_FORWARD;
 }
 
+int check_recursive_packet(struct nm_skb *skb)
+{
+	int ret = NM_PKT_FORWARD;	
+    struct list_head *pos=NULL;
+    struct recurs_dstmac *dstmac=NULL;
+
+	nm_mutex_lock(&recurs_dstmac_head->mutex);	
+	list_for_each(pos, &recurs_dstmac_head->list){
+		dstmac = list_entry(pos, struct recurs_dstmac, list);
+        if(memcmp(dstmac->dst_mac, skb->mac.raw, NM_MAC_LEN)){
+	        nm_mutex_unlock(&recurs_dstmac_head->mutex);	
+            return NM_PKT_DISCARD;
+        }
+    }
+	nm_mutex_unlock(&recurs_dstmac_head->mutex);	
+	return ret;
+}
+
 int get_forward_policy(struct nm_skb *skb)
 {
 	struct list_head *pos;
@@ -1243,6 +1306,19 @@ int get_forward_policy(struct nm_skb *skb)
 
 	nm_mutex_unlock(&fw_policy_list->mutex);	
 	return NM_PKT_DROP;
+}
+
+int init_recurs_dst_mac_list(void)
+{
+	recurs_dstmac_head = (struct recurs_dstmac_head *)malloc(sizeof(struct recurs_dstmac_head));
+	if(NULL==recurs_dstmac_head){
+		return -1;
+	}
+	memset(recurs_dstmac_head, 0, sizeof(struct recurs_dstmac_head));	
+	INIT_LIST_HEAD(&recurs_dstmac_head->list);
+	nm_mutex_init(&recurs_dstmac_head->mutex);
+
+	return 0;
 }
 
 int init_policy_list(void)

@@ -44,7 +44,17 @@ struct nm_skb{
 	/* IP head */
 	union{
 		struct iphdr *iph;
-		struct arphdr *arph; unsigned char *raw; }nh; union{ unsigned char *raw; }mac; __be16 protocol; unsigned short vlanid; }; 
+		struct arphdr *arph;
+        unsigned char *raw;
+   }nh;
+
+   union{
+       unsigned char *raw;
+   }mac;
+   __be16 protocol;
+   unsigned short vlanid;
+}; 
+
 enum{
 	NETMAP_BUF=0,
 	MEMORY_BUF
