@@ -1,5 +1,5 @@
 {
-	"mgt_cfg":{"name":"eth0", "ipaddr":"127.0.0.1/24", "tcpport":8000},
+	"mgt_cfg":{"name":"eth0", "ipaddr":"127.0.0.2/24", "gateway":"127.0.0.1", "tcpport":8000},
 	"serv_cfg":{"ipaddr":"127.0.0.1","udpport":8001},
 	"inport_list":[
 		{"name":"eth1"},

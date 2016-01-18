@@ -80,6 +80,11 @@ int parse_vsecplat_config(void)
 			strncpy(mgt_cfg->ipaddr, tmp->u.val_str, NM_ADDR_STR_LEN);
 		}
 
+		tmp = rte_object_get_item(item, "gateway");	
+		if(NULL!=tmp){
+			strncpy(mgt_cfg->gateway, tmp->u.val_str, NM_ADDR_STR_LEN);
+		}
+
 		tmp = rte_object_get_item(item, "tcpport");
 		if(NULL==tmp){
 			nm_log("Failed to parse tcpport.\n");

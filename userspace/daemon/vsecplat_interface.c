@@ -133,7 +133,13 @@ int setup_mgt_interface(void)
 	printf("find mgt interface : %s\n", ifp->name);
 	memset(cmd_buf, 0, 64);					
 
-	sprintf(cmd_buf, "ifconfig %s %s up", ifp->name, global_vsecplat_config->mgt_cfg->ipaddr);
+    if(global_vsecplat_config->mgt_cfg->gateway[0]=='0'){
+	    sprintf(cmd_buf, "ifconfig %s %s up", ifp->name, global_vsecplat_config->mgt_cfg->ipaddr);
+    }else{
+	    sprintf(cmd_buf, "ifconfig %s %s gw %s up", 
+            ifp->name, global_vsecplat_config->mgt_cfg->ipaddr, global_vsecplat_config->mgt_cfg->gateway);
+    
+    }
 	printf("Will exec cmd: %s\n", cmd_buf);
 
 	cmd_file = popen(cmd_buf, "r");

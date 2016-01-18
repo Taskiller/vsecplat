@@ -6,6 +6,7 @@
 struct mgt_cfg{
 	char name[NM_NAME_LEN];
 	char ipaddr[NM_ADDR_STR_LEN];
+	char gateway[NM_ADDR_STR_LEN];
 	int tcpport;
 };
 
