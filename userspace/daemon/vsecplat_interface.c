@@ -121,7 +121,8 @@ int setup_mgt_interface(void)
 	FILE *cmd_file=NULL;
 	char cmd_buf[64];
 
-	if(global_vsecplat_config->mgt_cfg->ipaddr[0]=='0'){
+	if(global_vsecplat_config->mgt_cfg->ipaddr[0]=='\0'){
+        printf("there're no ip address for mgt interface\n");
 		return 0;
 	}
 
@@ -131,22 +132,28 @@ int setup_mgt_interface(void)
 		return -1;
 	}
 	printf("find mgt interface : %s\n", ifp->name);
+
 	memset(cmd_buf, 0, 64);					
-
-    if(global_vsecplat_config->mgt_cfg->gateway[0]=='0'){
-	    sprintf(cmd_buf, "ifconfig %s %s up", ifp->name, global_vsecplat_config->mgt_cfg->ipaddr);
-    }else{
-	    sprintf(cmd_buf, "ifconfig %s %s gw %s up", 
-            ifp->name, global_vsecplat_config->mgt_cfg->ipaddr, global_vsecplat_config->mgt_cfg->gateway);
-    
-    }
+    sprintf(cmd_buf, "ifconfig %s %s up", ifp->name, global_vsecplat_config->mgt_cfg->ipaddr);
 	printf("Will exec cmd: %s\n", cmd_buf);
-
 	cmd_file = popen(cmd_buf, "r");
 	if(NULL==cmd_file){
 		return -1;
 	}
 	pclose(cmd_file);
+
+    if(global_vsecplat_config->mgt_cfg->gateway[0]!='\0'){
+	    memset(cmd_buf, 0, 64);					
+	    sprintf(cmd_buf, "route add default gw %s", global_vsecplat_config->mgt_cfg->gateway);
+    
+	    printf("Will exec cmd: %s\n", cmd_buf);
+    	cmd_file = popen(cmd_buf, "r");
+    	if(NULL==cmd_file){
+    		return -1;
+    	}
+    	pclose(cmd_file);
+    }
+
 	return 0;
 }
 

@@ -159,9 +159,14 @@ int vsecplat_report_stats(struct thread *thread)
 			goto out;
 		}
 
+		if(vsecplat_show_record){
+			printf("send record: len=%d, msg->data=%s\n", len, msg->data);
+		}
+
 		if(global_vsecplat_config->isencrypted){
 			len = nm_encrypt((unsigned int *)msg->data, len);
 		}
+
 		report_conn_desc->send_len = len+sizeof(struct msg_head);
 		msg->len = report_conn_desc->send_len;
 		msg->msg_type = NM_MSG_REPORTS;
@@ -170,10 +175,6 @@ int vsecplat_report_stats(struct thread *thread)
 		if(w_len<0){
 			nm_log("socket write error, errno=%d\n", errno);
 			goto out;
-		}
-
-		if(vsecplat_show_record){
-			printf("send record: msg len=%d, send_len=%d\n", msg->len, w_len);
 		}
 
 		memset(report_conn_desc->report_buf, 0, NM_SEND_BUF_LEN);

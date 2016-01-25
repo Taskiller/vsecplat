@@ -955,7 +955,7 @@ static int persist_array(char *buf, struct rte_json *json, int depth, int fmt)
 
 	if(0==numentries){ // 若Array为空
 		strcpy(buf, "[]");
-		return 3;
+		return 2;
 	}
 
 	/* 分别对每个Member进行序列化*/

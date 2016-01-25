@@ -332,6 +332,11 @@ int vsecplat_persist_record(void)
 		list_add_tail(&record_json_item->list, &global_record_json_list);
 	}
 
+    if(list_empty(&global_record_json_list)){
+		rte_object_add_item(record_json_item->root, "record_list", record_json_item->array);
+    	list_add_tail(&record_json_item->list, &global_record_json_list);
+    }
+
 	gettimeofday(&report_time, NULL);
 	last_report_time = report_time.tv_sec;
 
