@@ -37,16 +37,18 @@ static int nm_ipv4_recv(struct nm_skb *skb)
 	 * 之所以到这里才返回，是为了识别数据包的地址和端口，以便进行统计
 	 * */
 	if((0==global_vsecplat_config->mirror_state)|| (0==global_vsecplat_config->guide_state)){
+        // printf("In nm_ipv4_recv, mirror_state or guide_state failed\n");
 		return NM_PKT_DROP;
 	}
 
     ret = check_duplicate_rule(skb);
     if(ret==NM_PKT_DISCARD){
+        // printf("In nm_ipv4_recv, discard by check_duplicate_rule\n");
         return NM_PKT_DISCARD;
     }
 
 	ret = get_forward_policy(skb);
-
+    // printf("In nm_ipv4_recv, ret=%d\n", ret);
 	return ret;	
 }
 
@@ -68,6 +70,7 @@ static int nm_vlan_recv(struct nm_skb *skb)
 	skb->vlanid = vid;
 	
 	nm_skb_pull(skb, VLAN_ETH_HLEN);
+    skb->nh.raw = skb->data;
 	if(ntohs(skb->protocol)==ETH_P_IP){
 		ret = nm_ipv4_recv(skb);
 	}else if(ntohs(skb->protocol)==ETH_P_ARP){
@@ -85,6 +88,7 @@ static int packet_intercept(struct nm_skb *skb)
 
 	ret = check_recursive_packet(skb);
 	if(ret==NM_PKT_DISCARD){
+        // printf("DISCARD: check_recursive_packet\n");
 		return NM_PKT_DISCARD;
 	}
 
@@ -131,17 +135,21 @@ void *packet_handle_thread(void *unused)
 
 		/* mirror_state==0, 既不转发，也不统计 */
 		if(0==global_vsecplat_config->mirror_state){
+            // printf("DISCARD: mirror_state is not 0\n");
 			continue;
 		}
 
 		orig_len = skb->len;
 
 		ret = packet_intercept(skb);
-
+        if(ret==NM_PKT_DISCARD){
+            continue;
+        }
 		// ret = NM_PKT_DROP;
 
 		/* guide_state==0, 停止转发，但是要统计 */
 		if(0==global_vsecplat_config->guide_state){
+            // printf("DROP: guide_state is not 0\n");
 			ret = NM_PKT_DROP;
 		}
 

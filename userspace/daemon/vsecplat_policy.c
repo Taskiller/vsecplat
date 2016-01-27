@@ -1232,7 +1232,7 @@ int check_recursive_packet(struct nm_skb *skb)
 	nm_mutex_lock(&recurs_dstmac_head->mutex);	
 	list_for_each(pos, &recurs_dstmac_head->list){
 		dstmac = list_entry(pos, struct recurs_dstmac, list);
-        if(memcmp(dstmac->dst_mac, skb->mac.raw, NM_MAC_LEN)){
+        if(!memcmp(dstmac->dst_mac, skb->mac.raw, NM_MAC_LEN)){
 	        nm_mutex_unlock(&recurs_dstmac_head->mutex);	
             return NM_PKT_DISCARD;
         }
@@ -1265,31 +1265,31 @@ int get_forward_policy(struct nm_skb *skb)
 	list_for_each(pos, &fw_policy_list->list){
 		rule_entry = list_entry(pos, struct rule_entry, list);
 		if(!(((rule_entry->rule_not_flag&RULE_NOT_SIP)==RULE_NOT_SIP)^check_addr_obj_list(&rule_entry->sip, saddr))){
-			// printf("SIP NOT match.\n");
+			// printf("SIP NOT match.saddr=0x%x\n", saddr);
 			continue;
 		}
 		if(!(((rule_entry->rule_not_flag&RULE_NOT_DIP)==RULE_NOT_DIP)^check_addr_obj_list(&rule_entry->dip, daddr))){
-			// printf("DIP NOT match.\n");
+			// printf("DIP NOT match. daddr=0x%x\n", daddr);
 			continue;
 		}
 
 		if(!(((rule_entry->rule_not_flag&RULE_NOT_SPORT)==RULE_NOT_SPORT)^check_num_obj_list(&rule_entry->sport, sport))){
-			// printf("SPORT NOT match. rule_entry->sport: mask=%d, num=%d, sport=%d\n", rule_entry->sport.num_mask, rule_entry->sport.u.num, sport);
+			// printf("SPORT NOT match. sport=%d\n", sport);
 			continue;
 		}
 
 		if(!(((rule_entry->rule_not_flag&RULE_NOT_DPORT)==RULE_NOT_DPORT)^check_num_obj_list(&rule_entry->dport, dport))){
-			// printf("DPORT NOT match. rule_entry->dport: mask=%d, num=%d, dport=%d\n", rule_entry->dport.num_mask, rule_entry->dport.u.num, dport);
+			// printf("DPORT NOT match. dport=%d\n", dport);
 			continue;
 		}
 
 		if(!(((rule_entry->rule_not_flag&RULE_NOT_PROTO)==RULE_NOT_PROTO)^check_num_obj_list(&rule_entry->proto, proto))){
-			// printf("PROTO NOT match.\n");
+			// printf("PROTO NOT match. proto=0x%x\n", proto);
 			continue;
 		}
 
 		if(!(((rule_entry->rule_not_flag&RULE_NOT_VLANID)==RULE_NOT_VLANID)^check_num_obj_list(&rule_entry->vlanid, vlanid))){
-			// printf("VLANID NOT match.\n");
+			// printf("VLANID NOT match. vlanid=0x%x\n", vlanid);
 			continue;
 		}
 
