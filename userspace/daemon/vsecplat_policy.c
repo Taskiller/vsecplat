@@ -358,7 +358,7 @@ static char *persist_json_entry(struct rte_json *json)
 	char *txt_buf=NULL;
 	int len=0;
 
-	txt_buf = (char *)malloc(512*sizeof(char));
+	txt_buf = (char *)malloc(4096*sizeof(char));
 	if(NULL==txt_buf){
 		printf("Failed to alloc text buffer.\n");
 		return NULL;
