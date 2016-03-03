@@ -68,8 +68,11 @@ static int nm_vlan_recv(struct nm_skb *skb)
 	vid = (vlan_TCI & VLAN_VID_MASK);
 
 	skb->vlanid = vid;
-	
+#if 0
 	nm_skb_pull(skb, VLAN_ETH_HLEN);
+#endif
+    memmove(skb->data+12, skb->data+16, skb->len-16); // strip vlan tag
+    nm_skb_pull(skb, ETH_HLEN);  
     skb->nh.raw = skb->data;
 	if(ntohs(skb->protocol)==ETH_P_IP){
 		ret = nm_ipv4_recv(skb);
