@@ -3,7 +3,7 @@ MOD_LIST:= CONFIG_NETMAP=m CONFIG_E1000=m CONFIG_VIRTIO_NET=m
 
 M:=$(PWD)
 # Additional compile flags (e.g. header location)
-EXTRA_CFLAGS := -I$(root_dir)/drivers/netmap -I$(root_dir)/include -DCONFIG_NETMAP 
+EXTRA_CFLAGS := -I$(root_dir)/drivers/netmap -I$(root_dir)/include -DCONFIG_NETMAP  -DCONFIG_NETMAP_GENERIC
 
 EXTRA_CFLAGS += -Wno-unused-but-set-variable
 
