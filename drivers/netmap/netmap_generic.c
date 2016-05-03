@@ -596,6 +596,7 @@ generic_netmap_txsync(struct netmap_kring *kring, int flags)
 			 * break on failures and set notifications when
 			 * ring->cur == ring->tail || nm_i != cur
 			 */
+            addr += NM_HEAD_OFFSET;
 			tx_ret = generic_xmit_frame(ifp, m, addr, len, ring_nr);
 			if (unlikely(tx_ret)) {
 				ND(5, "start_xmit failed: err %d [nm_i %u, head %u, hwtail %u]",
@@ -744,6 +745,7 @@ generic_netmap_rxsync(struct netmap_kring *kring, int flags)
 			if (!m)	/* no more data */
 				break;
 			len = MBUF_LEN(m);
+            addr += NM_HEAD_OFFSET;
 			m_copydata(m, 0, len, addr);
 			ring->slot[nm_i].len = len;
 			ring->slot[nm_i].flags = slot_flags;

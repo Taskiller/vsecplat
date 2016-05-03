@@ -55,7 +55,7 @@ __FBSDID("$FreeBSD: head/sys/dev/netmap/netmap.c 241723 2012-10-19 09:41:45Z gle
 #include "netmap_mem2.h"
 
 // #define NETMAP_BUF_MAX_NUM	20*4096*2	/* large machine */
-#define NETMAP_BUF_MAX_NUM	4096*2	/* large machine */
+#define NETMAP_BUF_MAX_NUM	4096*8	/* large machine */
 
 #define NETMAP_POOL_MAX_NAMSZ	32
 
@@ -1404,7 +1404,7 @@ netmap_mem_rings_create(struct netmap_adapter *na)
 			netmap_mem_bufsize(na->nm_mem);
 		ND("%s h %d c %d t %d", kring->name,
 			ring->head, ring->cur, ring->tail);
-		ND("initializing slots for rxring %p", ring);
+        ND("initializing slots for rxring %p", ring);
 		if (i != na->num_rx_rings || (na->na_flags & NAF_HOST_RINGS)) {
 			/* this is a real ring */
 			if (netmap_new_bufs(na->nm_mem, ring->slot, ndesc)) {

@@ -74,6 +74,7 @@ static inline int get_next_ring_idx(int rx_if_idx, int start)
 
 extern int vsecplat_show_packet __attribute__((weak, section("data")));
 
+#if 0
 static inline int parse_packet_len(unsigned char *ptr)
 {
     unsigned short *proto = (unsigned short *)(ptr); 
@@ -91,6 +92,7 @@ static inline int parse_packet_len(unsigned char *ptr)
     }
     return 0;
 }
+#endif
 
 struct nm_skb *nm_recv(void)
 {
@@ -152,7 +154,9 @@ get_next_if:
 	skb->rx_slot_idx = cur;
 	skb->i_dev = dev;
     skb->head = (unsigned char *)p + NM_HEAD_OFFSET;
+#if 0
     slot->len = parse_packet_len(skb->head+12);
+#endif
     skb->data = skb->head;
     skb->tail = (unsigned char *)p + slot->len;
     skb->end = (unsigned char *)p + NM_BUF_SIZE - NM_END_RESERVED;
