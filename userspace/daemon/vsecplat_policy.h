@@ -65,7 +65,7 @@ struct num_obj_entry{
 	}u;
 };
 
-#define DUPLICATE_IP_MAX_NUM 32
+#define DUPLICATE_IP_MAX_NUM 128
 struct duplicate_rule{
 	struct nm_mutex mutex;
     struct addr_obj_entry src_ip[DUPLICATE_IP_MAX_NUM];
