@@ -1080,7 +1080,7 @@ static inline int test_match_addr_obj(struct addr_obj_entry *addr_obj, const u32
 			break;
 		case IP_RANGE:
 			// printf("IP_RANGE: min=0x%x, max=0x%x\n", addr_obj->u.range.min, addr_obj->u.range.max);
-			if((addr_obj->u.range.min<=ip)&&(addr_obj->u.range.max>=ip)){
+			if((ntohl(addr_obj->u.range.min)<=ntohl(ip))&&(ntohl(addr_obj->u.range.max)>=ntohl(ip))){
 				return 1;
 			}
 			break;
