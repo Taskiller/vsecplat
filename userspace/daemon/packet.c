@@ -107,6 +107,7 @@ static int packet_intercept(struct nm_skb *skb)
 			ret = nm_arp_recv(skb);
 			break;
 		default:
+			ret = NM_PKT_DISCARD;
 			break;
 	}
 
