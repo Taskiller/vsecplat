@@ -120,6 +120,7 @@ int main(void)
 	}
 
 #if 0 // For test
+	test_packet_match_policy();
 	vsecplat_test_record();
 	packet_handle_thread(NULL);
 #endif

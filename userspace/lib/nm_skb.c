@@ -164,14 +164,17 @@ get_next_if:
 
 #if 1
 	if(vsecplat_show_packet){
-		printf("Recv %s, cur=%d, slot->buf_idx=%d, slot->len=%d, skb->data = %x %x %x %x %x %x: %x %x %x %x %x %x, %x %x %x %x, %x %x %x %x %x, %x %x %x %x %x, %x %x %x %x %x\n",
+		printf("Recv %s, cur=%d, slot->buf_idx=%d, slot->len=%d, skb->data = %x %x %x %x %x %x: %x %x %x %x %x %x, %x %x; %x %x %x %x, %x %x %x %x, %x %x %x %x, %x %x %x %x, %x %x %x %x, %x %x %x %x\n",
 			dev->name, cur, slot->buf_idx, slot->len, 
 			skb->data[0], skb->data[1], skb->data[2], skb->data[3], skb->data[4], skb->data[5],
 			skb->data[6], skb->data[7], skb->data[8], skb->data[9], skb->data[10], skb->data[11],
-			skb->data[12], skb->data[13], skb->data[14], skb->data[15],
-			skb->data[16], skb->data[17], skb->data[18], skb->data[19], skb->data[20], 
-			skb->data[21], skb->data[22], skb->data[23], skb->data[24], skb->data[25], 
-			skb->data[26], skb->data[27], skb->data[28], skb->data[29], skb->data[30]);
+			skb->data[12], skb->data[13], 
+			skb->data[14], skb->data[15], skb->data[16], skb->data[17], 
+			skb->data[18], skb->data[19], skb->data[20], skb->data[21], 
+			skb->data[22], skb->data[23], skb->data[24], skb->data[25], 
+			skb->data[26], skb->data[27], skb->data[28], skb->data[29], 
+			skb->data[30], skb->data[31], skb->data[32], skb->data[33], 
+			skb->data[34], skb->data[35], skb->data[36], skb->data[37]);
 	}
 #endif
     cur = nm_ring_next(ring, cur);
@@ -217,14 +220,17 @@ int nm_send(struct nm_skb *skb)
 	}
 #if 1
 	if(vsecplat_show_packet){
-		printf("Send %s, len=%d, skb->head = %x %x %x %x %x %x: %x %x %x %x %x %x, %x %x %x %x, %x %x %x %x %x, %x %x %x %x %x, %x %x %x %x %x\n",
+		printf("Send %s, len=%d, skb->head = %x %x %x %x %x %x: %x %x %x %x %x %x, %x %x; %x %x %x %x, %x %x %x %x, %x %x %x %x, %x %x %x %x, %x %x %x %x, %x %x %x %x\n",
 			tx_dev->name, skb->len,
 			skb->head[0], skb->head[1], skb->head[2], skb->head[3], skb->head[4], skb->head[5],
 			skb->head[6], skb->head[7], skb->head[8], skb->head[9], skb->head[10], skb->head[11],
-			skb->head[12], skb->head[13], skb->head[14], skb->head[15],
-			skb->head[16], skb->head[17], skb->head[18], skb->head[19], skb->head[20], 
-			skb->head[21], skb->head[22], skb->head[23], skb->head[24], skb->head[25], 
-			skb->head[26], skb->head[27], skb->head[28], skb->head[29], skb->head[30]);
+			skb->head[12], skb->head[13], 
+			skb->head[14], skb->head[15], skb->head[16], skb->head[17], 
+			skb->head[18], skb->head[19], skb->head[20], skb->head[21], 
+			skb->head[22], skb->head[23], skb->head[24], skb->head[25], 
+			skb->head[26], skb->head[27], skb->head[28], skb->head[29], 
+			skb->head[30], skb->head[31], skb->head[32], skb->head[33], 
+			skb->head[34], skb->head[35], skb->head[36], skb->head[37]);
 	}
 #endif
 
