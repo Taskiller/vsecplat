@@ -165,7 +165,7 @@ e1000_netmap_txsync(struct netmap_kring *kring, int flags)
 
 			if (slot->flags & NS_BUF_CHANGED) {
 				/* buffer has changed, reload map */
-				// netmap_reload_map(pdev, DMA_TO_DEVICE, old_paddr, addr)
+				paddr += NM_HEAD_OFFSET;
 				curr->buffer_addr = htole64(paddr);
 			}
 			slot->flags &= ~(NS_REPORT | NS_BUF_CHANGED);
@@ -277,6 +277,8 @@ e1000_netmap_rxsync(struct netmap_kring *kring, int flags)
 
 			if (addr == NETMAP_BUF_BASE(na)) /* bad buf */
 				goto ring_reset;
+
+			paddr += NM_HEAD_OFFSET;
 			curr->NM_E1R_RX_BUFADDR = htole64(paddr); /* reload ext.desc. addr. */
 			if (slot->flags & NS_BUF_CHANGED) {
 				/* buffer has changed, reload map */
@@ -336,11 +338,11 @@ static int e1000e_netmap_init_buffers(struct SOFTC_T *adapter)
 		struct e1000_buffer *bi = &rxr->buffer_info[i];
 		si = netmap_idx_n2k(&na->rx_rings[0], i);
 		PNMB(na, slot + si, &paddr);
+		paddr += NM_HEAD_OFFSET;
 
 		if (bi->skb)
 			D("rx buf %d was set", i);
 		bi->skb = NULL; // XXX leak if set
-		// netmap_load_map(...)
 		E1000_RX_DESC_EXT(*rxr, i)->NM_E1R_RX_BUFADDR = htole64(paddr);
 	}
 	rxr->next_to_use = 0;
@@ -354,7 +356,7 @@ static int e1000e_netmap_init_buffers(struct SOFTC_T *adapter)
 	for (i = 0; i < na->num_tx_desc; i++) {
 		si = netmap_idx_n2k(&na->tx_rings[0], i);
 		PNMB(na, slot + si, &paddr);
-		// netmap_load_map(...)
+		paddr += NM_HEAD_OFFSET;
 		E1000_TX_DESC(*txr, i)->buffer_addr = htole64(paddr);
 	}
 	return 1;
