@@ -163,7 +163,9 @@ void *packet_handle_thread(void *unused)
 		}
 
         if(ret!=NM_PKT_DISCARD){
-		    vsecplat_record_pkt(skb);
+			if(global_vsecplat_config->isstatistics){
+		    	vsecplat_record_pkt(skb);
+			}
         }
 	}while(1);
 

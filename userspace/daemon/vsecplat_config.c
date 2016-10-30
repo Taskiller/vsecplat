@@ -51,6 +51,7 @@ int parse_vsecplat_config(void)
 	global_vsecplat_config->time_interval = VSECPLAT_REPORT_INTERVAL;
 	global_vsecplat_config->mirror_state = 1;
 	global_vsecplat_config->guide_state = 1;
+	global_vsecplat_config->isstatistics = 1;
 
 	json = rte_parse_json(file_buf);
 	if(NULL==json){
@@ -192,6 +193,11 @@ int parse_vsecplat_config(void)
 	item = rte_object_get_item(json, "isencrypted");
 	if(NULL!=item){
 		global_vsecplat_config->isencrypted = item->u.val_int;
+	}
+
+	item = rte_object_get_item(json, "isstatistics");
+	if(NULL!=item){
+		global_vsecplat_config->isstatistics = item->u.val_int;
 	}
 
 	rte_destroy_json(json);

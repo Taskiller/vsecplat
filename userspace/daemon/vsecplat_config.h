@@ -34,6 +34,7 @@ struct vsecplat_config{
 	struct outport_desc *outport_desc_array;
 	int time_interval;
 	int isencrypted;
+	int isstatistics;
 	int mirror_state;
 	int guide_state;
 };

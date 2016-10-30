@@ -136,6 +136,10 @@ int vsecplat_report_stats(struct thread *thread)
 	struct list_head *pos=NULL, *tmp=NULL;
 	struct record_json_item *record_json_item=NULL;
 
+	if(!global_vsecplat_config->isstatistics){
+		return 0;
+	}
+
 	if(report_conn_desc->report_sock==0){
 		report_conn_desc->report_sock = socket(AF_INET, SOCK_DGRAM, 0);
 		if(report_conn_desc->report_sock<0){
