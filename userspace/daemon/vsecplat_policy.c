@@ -1251,7 +1251,7 @@ int get_forward_policy(struct nm_skb *skb)
 	saddr = skb->nh.iph->saddr;
 	daddr = skb->nh.iph->daddr;
 	proto = skb->nh.iph->protocol;
-	vlanid = ntohs(skb->vlanid);
+	vlanid = skb->vlanid;
 
 	if(proto==IPPROTO_UDP){ // UDP
 		sport = ntohs(skb->h.uh->source);

@@ -194,7 +194,7 @@ static struct rte_json *record_entry_to_json(struct record_entry *entry)
 		return NULL;
 	}
 	item->type = JSON_INTEGER;
-	item->u.val_int = ntohs(entry->vlanid);
+	item->u.val_int = entry->vlanid;
 	rte_object_add_item(obj, "vlanid", item);
 
 	item = new_json_item();
